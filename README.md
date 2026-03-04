@@ -117,6 +117,10 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v5.3.4 — 2026-03-04
+- 击球信息版初始位置修正为右上角（x=0.695, y=0.05），遵守 5% 安全边界
+- 计分卡信息版初始 y 值按比例修正（16:9→0.76, 9:16→0.89, 1:1→0.84），底边不再超出安全区
+
 ### v5.3.3 — 2026-03-04
 - OUT/IN 统计改为白底黑字（不再沿用成绩色块）
 - 击球信息版右侧区域加宽 10px（SHOT_W 480→490，左列宽度不变）

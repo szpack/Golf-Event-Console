@@ -191,16 +191,17 @@ function defState(){
     exportRes:2160, bgOpacity:1.0, overlayOpacity:1.0,
     safeZone:false, szSize:'10', lang:'en',
     userBg:null,
+    // x = 0.95 − SHOT_W/1920 = 0.695 (right edge at 5% safe zone), y = 0.05 (top safe zone)
     overlayPos:{
-      '16:9':{x:0.73,y:0.05},
-      '9:16':{x:0.55,y:0.05},
-      '1:1': {x:0.65,y:0.05}
+      '16:9':{x:0.695,y:0.05},
+      '9:16':{x:0.695,y:0.05},
+      '1:1': {x:0.695,y:0.05}
     },
-    // v4.5: scorecard pos uses 'centered' flag for auto-center
+    // centered horizontally; y = 0.95 − SC_height_fraction per ratio (bottom at 5% safe zone)
     scorecardPos:{
-      '16:9':{x:0.5,y:0.83,centered:true},
-      '9:16':{x:0.5,y:0.83,centered:true},
-      '1:1': {x:0.5,y:0.83,centered:true}
+      '16:9':{x:0.5,y:0.76,centered:true},
+      '9:16':{x:0.5,y:0.89,centered:true},
+      '1:1': {x:0.5,y:0.84,centered:true}
     },
     holes:Array.from({length:18},()=>({par:4,delta:null,shots:[],shotIndex:0,manualTypes:{},toPins:{}}))
   };
