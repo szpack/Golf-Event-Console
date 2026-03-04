@@ -461,9 +461,20 @@ function wireAll(){
     if(sec){ sec.style.display=''; sec.classList.toggle('show',e.target.checked); }
     redrawOnly(); scheduleSave();
   };
-  // show player name in scorecard
+  // show player name in scorecard (settings drawer)
   const chkPN=document.getElementById('chk-show-pname');
-  if(chkPN) chkPN.onchange=e=>{ S.showPlayerName=e.target.checked; redrawOnly(); scheduleSave(); };
+  if(chkPN) chkPN.onchange=e=>{
+    S.showPlayerName=e.target.checked;
+    const nav=document.getElementById('chk-pname-nav'); if(nav) nav.checked=S.showPlayerName;
+    redrawOnly(); scheduleSave();
+  };
+  // show player name in scorecard (nav bar shortcut)
+  const chkPNnav=document.getElementById('chk-pname-nav');
+  if(chkPNnav) chkPNnav.onchange=e=>{
+    S.showPlayerName=e.target.checked;
+    const sd=document.getElementById('chk-show-pname'); if(sd) sd.checked=S.showPlayerName;
+    redrawOnly(); scheduleSave();
+  };
   // player manager modal backdrop
   const pmBg=document.getElementById('player-modal-bg');
   if(pmBg) pmBg.onclick=closePlayerManager;
@@ -499,10 +510,10 @@ function wireAll(){
   window.addEventListener('keydown',e=>{
     if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
     const k=e.key;
-    if(k==='ArrowRight'||k==='.'){nextShot();e.preventDefault();}
-    else if(k==='ArrowLeft'||k===','){prevShot();e.preventDefault();}
-    else if(k==='ArrowUp'){gotoPrevHole();e.preventDefault();}
-    else if(k==='ArrowDown'){gotoNextHole();e.preventDefault();}
+    if(k==='ArrowRight'){gotoNextHole();e.preventDefault();}
+    else if(k==='ArrowLeft'){gotoPrevHole();e.preventDefault();}
+    else if(k==='ArrowUp'||k===','){prevShot();e.preventDefault();}
+    else if(k==='ArrowDown'||k==='.'){nextShot();e.preventDefault();}
     else if(!e.metaKey&&!e.ctrlKey&&!e.altKey){
       const kl=k.toLowerCase();
       if(kl==='h') gotoNextHole();

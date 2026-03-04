@@ -681,9 +681,16 @@ function gotoPrevHole(){
   render(); scheduleSave();
 }
 
+const RATIO_BG={'16:9':'./bkimg.jpeg','9:16':'./bkimg-1-1.jpg','1:1':'./bkimg-9-16.jpg'};
+
 function setRatio(r){
   S.ratio=r;
   document.querySelectorAll('.ratio-btn').forEach(b=>b.classList.toggle('active',b.dataset.ratio===r));
+  // Switch default background if user has not uploaded a custom one
+  if(!S.userBg){
+    const bgEl=document.getElementById('bg-img');
+    if(bgEl){ bgEl.src=RATIO_BG[r]||DEFAULT_BG; bgEl.style.display='block'; }
+  }
   render(); scheduleSave();
 }
 
@@ -852,14 +859,15 @@ function redrawOnly(){
 
 function drawOverlays(ctx,w,h,forExport){
   if(S.safeZone) drawSafeZone(ctx,w,h);
-  const scale=w/1920;
+  const baseScale=w/1920;
+  const is916=S.ratio==='9:16';
   if(S.showShot&&curHole().delta!==null){
+    const shotScale=baseScale*(is916?1.6:1);
     const pos=S.overlayPos[S.ratio];
-    drawShotOverlay(ctx,pos.x*w,pos.y*h,scale);
+    drawShotOverlay(ctx,pos.x*w,pos.y*h,shotScale);
   }
   if(S.showScore){
-    // v4.5: resolve centered position
-    const scScale=w/1920;
+    const scScale=baseScale*(is916?1.35:1);
     const scW=getSCWidth(scScale);
     let scX;
     const pos=S.scorecardPos[S.ratio];
@@ -1093,12 +1101,13 @@ function expGetDims(){
   return{w,h};
 }
 function expSanitize(s){ return (s||'').replace(/[^\w\u4e00-\u9fa5\u3040-\u30ff\uAC00-\uD7A3]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'')||'_'; }
+function expTitleCase(s){ return s.replace(/(^|_)([a-z])/g,(m,p1,p2)=>p1+p2.toUpperCase()); }
 function expResLabel(){ const r=S.exportRes||2160; return r>=2160?'4K':r>=1440?'1440P':'1080P'; }
 function expModeLabel(){ return S.displayMode==='topar'?'TOPAR':'GROSS'; }
-function expCourse(){ return expSanitize(S.courseName)||'Course'; }
-function expPlayer(){ if(S.currentPlayerId){const p=(S.players||[]).find(p=>p.id===S.currentPlayerId);if(p)return expSanitize(p.name);} return 'Session'; }
+function expCourse(){ return expTitleCase(expSanitize(S.courseName)||'Course'); }
+function expPlayer(){ if(S.currentPlayerId){const p=(S.players||[]).find(p=>p.id===S.currentPlayerId);if(p)return expTitleCase(expSanitize(p.name));} return 'Session'; }
 function expShotFile(hole,shotNum,st){ return `${expCourse()}_${expPlayer()}_H${String(hole).padStart(2,'0')}_S${String(shotNum).padStart(2,'0')}_${st}_${expModeLabel()}_${expResLabel()}.png`; }
-function expFinalFile(hole,res){ return `${expCourse()}_${expPlayer()}_H${String(hole).padStart(2,'0')}_FINAL_${res}_${expModeLabel()}_${expResLabel()}.png`; }
+function expFinalFile(hole,res){ return `${expCourse()}_${expPlayer()}_H${String(hole).padStart(2,'0')}_ZFinal_${res}_${expModeLabel()}_${expResLabel()}.png`; }
 function expSCFile(k,range){ return `${expCourse()}_${expPlayer()}_SC_${String(k).padStart(2,'0')}_${range}_${expModeLabel()}_${expResLabel()}.png`; }
 
 function expCanvasToBlob(canvas){ return new Promise(r=>canvas.toBlob(r,'image/png')); }
@@ -1107,14 +1116,16 @@ function expSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function expMakeShotCanvas(w,h){
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d'); ctx.globalAlpha=S.overlayOpacity??1;
-  const scale=w/1920, pos=S.overlayPos[S.ratio];
+  const is916=S.ratio==='9:16';
+  const scale=(w/1920)*(is916?1.6:1), pos=S.overlayPos[S.ratio];
   drawShotOverlay(ctx,pos.x*w,pos.y*h,scale);
   return c;
 }
 function expMakeSCCanvas(w,h){
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d'); ctx.globalAlpha=S.overlayOpacity??1;
-  const scale=w/1920, scW=getSCWidth(scale), pos=S.scorecardPos[S.ratio];
+  const is916=S.ratio==='9:16';
+  const scale=(w/1920)*(is916?1.35:1), scW=getSCWidth(scale), pos=S.scorecardPos[S.ratio];
   let scX; if(pos.centered)scX=(w-scW)/2; else if(pos.absX!==undefined)scX=pos.absX*w; else scX=pos.x*w-scW/2;
   drawScorecardOverlay(ctx,scX,pos.y*h,scale);
   return c;
@@ -1291,6 +1302,7 @@ function init(){
   document.getElementById('chk-shot').checked=S.showShot;
   document.getElementById('chk-score').checked=S.showScore;
   const chkPN=document.getElementById('chk-show-pname'); if(chkPN) chkPN.checked=!!S.showPlayerName;
+  const chkPNnav=document.getElementById('chk-pname-nav'); if(chkPNnav) chkPNnav.checked=!!S.showPlayerName;
   document.getElementById('chk-total').checked=S.showTotal;
   const _scRangeSec=document.getElementById('score-range-sec'); if(_scRangeSec){ _scRangeSec.style.display=''; _scRangeSec.classList.toggle('show',!!S.showScore); }
   document.querySelectorAll('[name=scr]').forEach(r=>r.checked=r.value===S.scoreRange);

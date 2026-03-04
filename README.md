@@ -117,6 +117,14 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v6.5.0 — 2026-03-05
+- 键盘快捷键调整：←/→ 切换前后洞，↑/↓ 切换前后杆（原逻辑相反）
+- 计分卡左上角球员名字加大加粗（更突出显示）
+- 左侧导航区 SC 开关旁新增「Player」复选框，可快速切换计分卡球员名字显示；与设置中的开关双向同步
+- 导出文件名英文单词改为 Title Case；完成态文件名 FINAL 前加 Z 前缀（排序更清晰）
+- 9:16 竖屏自动放大：计分卡覆盖层 ×1.35，击球覆盖层 ×1.6；导出图同步生效
+- 切换比例自动切换默认背景：16:9→bkimg.jpeg，9:16→bkimg-1-1.jpg，1:1→bkimg-9-16.jpg
+
 ### v6.4.5 — 2026-03-05
 - 修复 To Pin 距离输入框显示上下箭头（CSS 隐藏 spinner，所有浏览器兼容）
 

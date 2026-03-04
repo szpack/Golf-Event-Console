@@ -148,10 +148,10 @@ function drawScorecardOverlay(ctx,X,Y,scale){
   // HOLE label or player name
   if(S.showPlayerName){
     const pn=(typeof currentPlayerDisplayName==='function'?currentPlayerDisplayName():(S.playerName||'PLAYER')).toUpperCase();
-    ctx.fillStyle='rgba(255,255,255,0.9)';
-    ctx.font=`700 ${Math.round(lblFontSz*0.75)}px ${SF}`;
+    ctx.fillStyle='#ffffff';
+    ctx.font=`800 ${Math.round(lblFontSz*1.0)}px ${SF}`;
     let dn=pn;
-    while(ctx.measureText(dn).width>labelW*0.88&&dn.length>1) dn=dn.slice(0,-1);
+    while(ctx.measureText(dn).width>labelW*0.92&&dn.length>1) dn=dn.slice(0,-1);
     if(dn!==pn) dn=dn.slice(0,-1)+'…';
     ctx.fillText(dn,X+labelW/2,Y+hdrH/2);
   } else {
