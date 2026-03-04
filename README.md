@@ -117,6 +117,12 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v6.5.4 — 2026-03-05
+- 计分卡球员名字改为独立 badge 样式：白底黑字，圆角，仅包裹文字宽度，badge 外无背景延伸
+
+### v6.5.3 — 2026-03-05
+- 计分卡球员名字色块改为白底黑字，行底色保持绿色（#1B5E3B）
+
 ### v6.5.2 — 2026-03-05
 - 计分卡球员名字行底色改为紧包文字（名字宽度 + 1字符留白），不再拉通整行
 

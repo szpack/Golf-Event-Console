@@ -150,12 +150,13 @@ function drawScorecardOverlay(ctx,X,Y,scale){
     let dn=pn;
     while(ctx.measureText(dn).width>W*0.92&&dn.length>1) dn=dn.slice(0,-1);
     if(dn!==pn) dn=dn.slice(0,-1)+'…';
-    const nameX=X+labelW*0.3;
+    const padX=8*scale, padY=4*scale;
+    const nameX=X+padX*1.5;
     const nameW=ctx.measureText(dn).width;
-    const charW=ctx.measureText('M').width; // one extra char padding
-    rrect(ctx,nameX-charW*0.4,Y+nameRowH*0.1,nameW+charW*1.4,nameRowH*0.8,4*scale);
-    ctx.fillStyle='#113d27'; ctx.fill();
-    ctx.fillStyle='#ffffff';
+    const badgeH=nameRowH*0.78;
+    rrect(ctx,nameX-padX,Y+(nameRowH-badgeH)/2,nameW+padX*2,badgeH,5*scale);
+    ctx.fillStyle='#ffffff'; ctx.fill();
+    ctx.fillStyle='#111111';
     ctx.fillText(dn,nameX,Y+nameRowH/2);
   }
 
