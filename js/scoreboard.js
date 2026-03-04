@@ -79,7 +79,8 @@ function getSCWidth(scale){
 function getSCHeight(scale){
   // v5.2.1: scoreRowH +12%
   const hdrH=43, parRowH=48, scoreRowH=93, rowGap=7;
-  return(hdrH+parRowH+scoreRowH+rowGap*2)*scale;
+  const nameRowH=S.showPlayerName?40:0;
+  return(nameRowH+hdrH+parRowH+scoreRowH+rowGap*2)*scale;
 }
 
 // ── SCORECARD OVERLAY DRAW — v4.5 ──
@@ -94,9 +95,10 @@ function drawScorecardOverlay(ctx,X,Y,scale){
   const COL=54, LAB=Math.round(COL*1.3), TOT=Math.round(COL*1.5);
   const colW=COL*scale, labelW=LAB*scale, totalW=TOT*scale;
   const subW=totalW; // OUT and IN same width as TOT
+  const nameRowH=S.showPlayerName?40*scale:0;
   const hdrH=43*scale, parRowH=48*scale, scoreRowH=93*scale, rowGap=7*scale;
   const W=labelW+(count*COL+(is18?TOT*2:0))*scale+totalW;
-  const H=hdrH+parRowH+scoreRowH+rowGap*2;
+  const H=nameRowH+hdrH+parRowH+scoreRowH+rowGap*2;
 
   const BASE=Math.round(19*scale);
   const lblFontSz=BASE;
@@ -140,56 +142,60 @@ function drawScorecardOverlay(ctx,X,Y,scale){
     ctx.restore();
   }
 
+  // ── Player name row (above HOLE header, only when showPlayerName) ──
+  if(S.showPlayerName){
+    const pn=(typeof currentPlayerDisplayName==='function'?currentPlayerDisplayName():(S.playerName||'PLAYER')).toUpperCase();
+    ctx.fillStyle='#113d27'; ctx.fillRect(X,Y,W,nameRowH);
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffffff';
+    ctx.font=`700 ${Math.round(34*scale)}px ${SF}`;
+    let dn=pn;
+    while(ctx.measureText(dn).width>W*0.92&&dn.length>1) dn=dn.slice(0,-1);
+    if(dn!==pn) dn=dn.slice(0,-1)+'…';
+    ctx.fillText(dn,X+labelW*0.3,Y+nameRowH/2);
+  }
+
   // ── HOLE header row ──
-  ctx.fillStyle='#1B5E3B'; ctx.fillRect(X,Y,W,hdrH);
+  const hdrY=Y+nameRowH;
+  ctx.fillStyle='#1B5E3B'; ctx.fillRect(X,hdrY,W,hdrH);
   ctx.textAlign='center'; ctx.textBaseline='middle';
 
   // HOLE label
-  // HOLE label or player name
-  if(S.showPlayerName){
-    const pn=(typeof currentPlayerDisplayName==='function'?currentPlayerDisplayName():(S.playerName||'PLAYER')).toUpperCase();
-    ctx.fillStyle='#ffffff';
-    ctx.font=`800 ${Math.round(lblFontSz*1.0)}px ${SF}`;
-    let dn=pn;
-    while(ctx.measureText(dn).width>labelW*0.92&&dn.length>1) dn=dn.slice(0,-1);
-    if(dn!==pn) dn=dn.slice(0,-1)+'…';
-    ctx.fillText(dn,X+labelW/2,Y+hdrH/2);
-  } else {
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font=`600 ${lblFontSz}px ${SF}`;
-    ctx.fillText('HOLE',X+labelW/2,Y+hdrH/2);
-  }
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.font=`600 ${lblFontSz}px ${SF}`;
+  ctx.fillText('HOLE',X+labelW/2,hdrY+hdrH/2);
 
   // Hole numbers
   for(let i=0;i<count;i++){
     const hi=start+i, lx=holeX(i);
     ctx.fillStyle='rgba(255,255,255,.85)';
     ctx.font=`600 ${lblFontSz}px ${SF}`;
-    ctx.fillText(String(hi+1),X+lx+colW/2,Y+hdrH/2);
+    ctx.fillText(String(hi+1),X+lx+colW/2,hdrY+hdrH/2);
   }
 
   // OUT / IN headers (18H only) — slightly darker bg strip
   if(is18){
     ctx.fillStyle='rgba(0,0,0,0.18)';
-    ctx.fillRect(X+outX,Y,subW,hdrH);
-    ctx.fillRect(X+inX,Y,subW,hdrH);
+    ctx.fillRect(X+outX,hdrY,subW,hdrH);
+    ctx.fillRect(X+inX,hdrY,subW,hdrH);
     ctx.fillStyle='rgba(255,255,255,.95)';
     ctx.font=`700 ${Math.round(subFontSz*0.75)}px ${SF}`;
-    ctx.fillText('OUT',X+outX+subW/2,Y+hdrH/2);
-    ctx.fillText('IN', X+inX +subW/2,Y+hdrH/2);
+    ctx.fillText('OUT',X+outX+subW/2,hdrY+hdrH/2);
+    ctx.fillText('IN', X+inX +subW/2,hdrY+hdrH/2);
   }
 
   // TOT header
   ctx.fillStyle='rgba(255,255,255,.95)';
   ctx.font=`700 ${Math.round(totFontSz*0.7)}px ${SF}`;
-  ctx.fillText('TOT',X+totX+totalW/2,Y+hdrH/2);
+  ctx.fillText('TOT',X+totX+totalW/2,hdrY+hdrH/2);
 
   // ── PAR row ──
-  const parY=Y+hdrH+rowGap;
+  const parY=hdrY+hdrH+rowGap;
   ctx.fillStyle='#EAF0EA'; ctx.fillRect(X,parY,W,parRowH);
-  for(let i=0;i<=count;i++) vline(holeX(i<count?i:count-1)+(i<count?0:colW),hdrH+rowGap,hdrH+rowGap+parRowH);
-  if(is18){ subVline(outX,hdrH+rowGap,H); subVline(inX,hdrH+rowGap,H); }
-  vline(totX,hdrH+rowGap,H);
+  const rowsTop=nameRowH+hdrH+rowGap;
+  for(let i=0;i<=count;i++) vline(holeX(i<count?i:count-1)+(i<count?0:colW),rowsTop,rowsTop+parRowH);
+  if(is18){ subVline(outX,rowsTop,H); subVline(inX,rowsTop,H); }
+  vline(totX,rowsTop,H);
 
   ctx.fillStyle='rgba(0,0,0,0.45)';
   ctx.font=`500 ${lblFontSz}px ${SF}`;
@@ -218,7 +224,7 @@ function drawScorecardOverlay(ctx,X,Y,scale){
   // ── SCORE row ──
   const scY=parY+parRowH+rowGap;
   ctx.fillStyle='#FFFFFF'; ctx.fillRect(X,scY,W,scoreRowH);
-  for(let i=0;i<=count;i++) vline(holeX(i<count?i:count-1)+(i<count?0:colW),hdrH+rowGap+parRowH+rowGap,H);
+  for(let i=0;i<=count;i++) vline(holeX(i<count?i:count-1)+(i<count?0:colW),nameRowH+hdrH+rowGap+parRowH+rowGap,H);
   ctx.strokeStyle='rgba(180,190,180,0.5)'; ctx.lineWidth=0.6;
   ctx.beginPath(); ctx.moveTo(X,scY); ctx.lineTo(X+W,scY); ctx.stroke();
 

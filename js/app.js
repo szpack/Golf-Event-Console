@@ -681,7 +681,7 @@ function gotoPrevHole(){
   render(); scheduleSave();
 }
 
-const RATIO_BG={'16:9':'./bkimg.jpeg','9:16':'./bkimg-1-1.jpg','1:1':'./bkimg-9-16.jpg'};
+const RATIO_BG={'16:9':'./bkimg.jpeg','9:16':'./bkimg-9-16.jpg','1:1':'./bkimg-1-1.jpg'};
 
 function setRatio(r){
   S.ratio=r;

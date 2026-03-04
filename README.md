@@ -117,6 +117,10 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v6.5.1 — 2026-03-05
+- 修复默认背景图对应关系：9:16→bkimg-9-16.jpg，1:1→bkimg-1-1.jpg（原错位）
+- 计分卡球员名字改为独立行显示于 HOLE 行上方，字号与击球信息区一致（34px），深绿底色
+
 ### v6.5.0 — 2026-03-05
 - 键盘快捷键调整：←/→ 切换前后洞，↑/↓ 切换前后杆（原逻辑相反）
 - 计分卡左上角球员名字加大加粗（更突出显示）
