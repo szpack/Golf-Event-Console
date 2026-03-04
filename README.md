@@ -117,6 +117,9 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v6.5.2 — 2026-03-05
+- 计分卡球员名字行底色改为紧包文字（名字宽度 + 1字符留白），不再拉通整行
+
 ### v6.5.1 — 2026-03-05
 - 修复默认背景图对应关系：9:16→bkimg-9-16.jpg，1:1→bkimg-1-1.jpg（原错位）
 - 计分卡球员名字改为独立行显示于 HOLE 行上方，字号与击球信息区一致（34px），深绿底色

@@ -145,14 +145,18 @@ function drawScorecardOverlay(ctx,X,Y,scale){
   // ── Player name row (above HOLE header, only when showPlayerName) ──
   if(S.showPlayerName){
     const pn=(typeof currentPlayerDisplayName==='function'?currentPlayerDisplayName():(S.playerName||'PLAYER')).toUpperCase();
-    ctx.fillStyle='#113d27'; ctx.fillRect(X,Y,W,nameRowH);
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillStyle='#ffffff';
     ctx.font=`700 ${Math.round(34*scale)}px ${SF}`;
     let dn=pn;
     while(ctx.measureText(dn).width>W*0.92&&dn.length>1) dn=dn.slice(0,-1);
     if(dn!==pn) dn=dn.slice(0,-1)+'…';
-    ctx.fillText(dn,X+labelW*0.3,Y+nameRowH/2);
+    const nameX=X+labelW*0.3;
+    const nameW=ctx.measureText(dn).width;
+    const charW=ctx.measureText('M').width; // one extra char padding
+    rrect(ctx,nameX-charW*0.4,Y+nameRowH*0.1,nameW+charW*1.4,nameRowH*0.8,4*scale);
+    ctx.fillStyle='#113d27'; ctx.fill();
+    ctx.fillStyle='#ffffff';
+    ctx.fillText(dn,nameX,Y+nameRowH/2);
   }
 
   // ── HOLE header row ──
