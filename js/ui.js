@@ -93,13 +93,14 @@ function buildPlayerArea(){
     nm.title=p.name;
     nm.onclick=()=>switchToPlayer(p.id);
     row.appendChild(nm);
-    // minus
+    // delta wrap (− [delta] +)
+    const wrap=document.createElement('div');
+    wrap.className='pr-delta-wrap';
     const mBtn=document.createElement('button');
     mBtn.className='pr-adj';
     mBtn.textContent='−';
     mBtn.onclick=()=>adjPlayerDelta(p.id,-1);
-    row.appendChild(mBtn);
-    // delta badge
+    wrap.appendChild(mBtn);
     const d=getPlayerHoleDelta(p.id,hi);
     const dBtn=document.createElement('button');
     dBtn.className='pr-delta-btn';
@@ -116,13 +117,13 @@ function buildPlayerArea(){
       if(!isCur) switchToPlayer(p.id);
       openPicker(e);
     };
-    row.appendChild(dBtn);
-    // plus
+    wrap.appendChild(dBtn);
     const pBtn=document.createElement('button');
     pBtn.className='pr-adj';
     pBtn.textContent='+';
     pBtn.onclick=()=>adjPlayerDelta(p.id,+1);
-    row.appendChild(pBtn);
+    wrap.appendChild(pBtn);
+    row.appendChild(wrap);
     grid.appendChild(row);
   });
 }
@@ -286,15 +287,17 @@ function buildDeltaBtn(){ buildPlayerArea(); }
 
 // ── TYPE BUTTONS ──
 const SHOT_KEYS={TEE:'T',APPR:'A',LAYUP:'L',CHIP:'C',PUTT:'U',PROV:'V',FOR_BIRDIE:'B',FOR_PAR:'P',FOR_BOGEY:'O'};
-const ACTION_TYPES=[
+const TYPE_ROW1=[
   {type:'TEE',   labelKey:'typeTee'},
   {type:'APPR',  labelKey:'typeAppr'},
-  {type:'LAYUP', labelKey:'typeLayup'},
   {type:'CHIP',  labelKey:'typeChip'},
+];
+const TYPE_ROW2=[
+  {type:'LAYUP', labelKey:'typeLayup'},
   {type:'PUTT',  labelKey:'typePutt'},
   {type:'PROV',  labelKey:'typeProv'},
 ];
-const CONTEXT_TYPES=[
+const TYPE_ROW3=[
   {type:'FOR_BIRDIE', labelKey:'typeFB'},
   {type:'FOR_PAR',    labelKey:'typeFP'},
   {type:'FOR_BOGEY',  labelKey:'typeFBo'},
@@ -308,14 +311,14 @@ function buildTypeButtons(){
   const isLast=hasDelta && gross && si===gross-1;
   const curType=hasDelta?(h.shots[si]?.type||''):'';
 
-  ['type-row1','type-row2'].forEach((id,ri)=>{
-    const row=document.getElementById(id); row.innerHTML='';
-    (ri===0?ACTION_TYPES:CONTEXT_TYPES).forEach(({type,labelKey})=>{
+  const rows=[[TYPE_ROW1,'type-row1'],[TYPE_ROW2,'type-row2'],[TYPE_ROW3,'type-row3']];
+  rows.forEach(([types,id])=>{
+    const row=document.getElementById(id); if(!row) return; row.innerHTML='';
+    types.forEach(({type,labelKey})=>{
       const btn=document.createElement('button');
       btn.className='tbtn'+(curType===type?' active':'');
       btn.dataset.type=type;
       btn.textContent=T(labelKey).toUpperCase();
-      // On last shot: FOR types are always available; action types also available to switch back to result mode
       btn.onclick=()=>setShotType(type);
       row.appendChild(btn);
     });
@@ -345,7 +348,9 @@ function buildShotButtons(){
 // ── RIGHT PANEL REFRESH ──
 function updateRightPanel(){
   const h=curHole(), idx=S.currentHole, gross=getGross(h);
-  document.getElementById('hole-num-big').textContent=T('holeHero',idx+1);
+  const _hl=document.getElementById('hole-lbl'), _hn=document.getElementById('hole-num');
+  if(_hl&&_hn){ _hl.textContent=T('holeLbl'); _hn.textContent=String(idx+1); }
+  else document.getElementById('hole-num-big').textContent=T('holeHero',idx+1);
   const _hpb=document.getElementById('hole-par-big'); if(_hpb) _hpb.textContent=T('parLabel',h.par);
   [3,4,5].forEach(p=>document.getElementById('par'+p).classList.toggle('active',h.par===p));
   // Per-shot To Pin — data-driven, no checkbox

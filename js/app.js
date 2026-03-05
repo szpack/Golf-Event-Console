@@ -14,13 +14,14 @@ const SHOT_W=490, SHOT_H=132, ROW1=46, ROW2=42, ROW3=44, COL_W=148, RPAD=12;
 // ============================================================
 const STRINGS = {
   en:{
-    holeHero:h=>`HOLE ${h}`, parLabel:p=>`PAR ${p}`,
+    holeHero:h=>`HOLE ${h}`, holeLbl:'HOLE', parLabel:p=>`PAR ${p}`,
     hintMain:'Click to upload background / Drop image here',
     hintSub:'Preview only — not included in export',
     distLabel:'To Pin', distUnit:'yds',
     totalLabel:'TOTAL DISP',
     finalScore:'FINAL SCORE (DELTA)',
     setScore:'SET SCORE',
+    everyShot:'EVERY SHOT',
     shotSection:'SHOT', optionsTitle:'DISPLAY OPTIONS',
     shotOverlay:'Shot Overlay', scorecardOverlay:'Scorecard',
     front9:'Front 9', back9:'Back 9', h18:'18 Holes',
@@ -45,7 +46,7 @@ const STRINGS = {
     forBirdie:'FOR BIRDIE', forPar:'FOR PAR', forBogey:'FOR BOGEY',
     forDouble:'FOR DOUBLE', forTriple:'FOR TRIPLE+',
     // shot type button labels — abbreviated
-    typeTee:'TEE', typeAppr:'APPR', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'P',
+    typeTee:'TEE OFF', typeAppr:'APPROACH', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'PROVISIONAL',
     typeFB:'FOR BIRDIE', typeFP:'FOR PAR', typeFBo:'FOR BOGEY',
     provisional:'PROVISIONAL',
     pickerRows:d=>{
@@ -66,13 +67,14 @@ const STRINGS = {
     bogey:'BOGEY', double:'DOUBLE', triple:'TRIPLE+',
   },
   zh:{
-    holeHero:h=>`第 ${h} 洞`, parLabel:p=>`标准杆 ${p}`,
+    holeHero:h=>`第 ${h} 洞`, holeLbl:'第·洞', parLabel:p=>`标准杆 ${p}`,
     hintMain:'点击上传背景图 / 拖拽图片到此处',
     hintSub:'仅用于预览，不参与导出',
     distLabel:'距旗杆', distUnit:'码',
     totalLabel:'总杆显示',
     finalScore:'本洞成绩 (DELTA)',
     setScore:'设置成绩',
+    everyShot:'每一杆',
     shotSection:'击球', optionsTitle:'显示选项',
     shotOverlay:'Shot Overlay', scorecardOverlay:'计分卡',
     front9:'前9洞', back9:'后9洞', h18:'全18洞',
@@ -95,7 +97,7 @@ const STRINGS = {
     toeOff:'开球', approach:'攻果岭', layup:'过度', chip:'切杆', putt:'推杆',
     forBirdie:'抓鸟推', forPar:'保帕推', forBogey:'保柏忌推',
     forDouble:'保双推', forTriple:'保三+推',
-    typeTee:'开球', typeAppr:'攻果岭', typeLayup:'过度', typeChip:'切杆', typePutt:'推杆', typeProv:'P',
+    typeTee:'开球', typeAppr:'攻果岭', typeLayup:'过渡', typeChip:'切杆', typePutt:'推杆', typeProv:'暂定球',
     typeFB:'抓鸟推', typeFP:'保帕推', typeFBo:'保柏忌推',
     provisional:'暂定球',
     pickerRows:d=>{
@@ -116,13 +118,14 @@ const STRINGS = {
     bogey:'柏忌', double:'双柏忌', triple:'三柏忌+',
   },
   ja:{
-    holeHero:h=>`ホール ${h}`, parLabel:p=>`パー ${p}`,
+    holeHero:h=>`ホール ${h}`, holeLbl:'HOLE', parLabel:p=>`パー ${p}`,
     hintMain:'クリックして背景画像をアップロード / 画像をここにドロップ',
     hintSub:'プレビュー専用 — エクスポートには含まれません',
     distLabel:'ピンまで', distUnit:'ヤード',
     totalLabel:'合計表示',
     finalScore:'ホールスコア (DELTA)',
     setScore:'スコア設定',
+    everyShot:'全ショット',
     shotSection:'ショット', optionsTitle:'表示オプション',
     shotOverlay:'Shot Overlay', scorecardOverlay:'スコアカード',
     front9:'前半 9H', back9:'後半 9H', h18:'18ホール',
@@ -145,7 +148,7 @@ const STRINGS = {
     toeOff:'ティーショット', approach:'アプローチ', layup:'レイアップ', chip:'チップ', putt:'パット',
     forBirdie:'バーディーパット', forPar:'パーパット', forBogey:'ボギーパット',
     forDouble:'ダブルパット', forTriple:'トリプル+パット',
-    typeTee:'TEE', typeAppr:'APPR', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'P',
+    typeTee:'TEE OFF', typeAppr:'APPROACH', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'PROVISIONAL',
     typeFB:'バーディー', typeFP:'パー', typeFBo:'ボギー',
     provisional:'プロビジョナル',
     pickerRows:d=>{
@@ -166,13 +169,14 @@ const STRINGS = {
     bogey:'ボギー', double:'ダブルボギー', triple:'トリプル+',
   },
   ko:{
-    holeHero:h=>`${h}번 홀`, parLabel:p=>`파 ${p}`,
+    holeHero:h=>`${h}번 홀`, holeLbl:'HOLE', parLabel:p=>`파 ${p}`,
     hintMain:'클릭하여 배경 이미지 업로드 / 여기에 이미지를 드롭',
     hintSub:'미리보기 전용 — 내보내기에 포함되지 않음',
     distLabel:'핀까지', distUnit:'야드',
     totalLabel:'합계 표시',
     finalScore:'홀 스코어 (DELTA)',
     setScore:'스코어 설정',
+    everyShot:'모든 샷',
     shotSection:'샷', optionsTitle:'표시 옵션',
     shotOverlay:'Shot Overlay', scorecardOverlay:'스코어카드',
     front9:'전반 9홀', back9:'후반 9홀', h18:'18홀',
@@ -195,7 +199,7 @@ const STRINGS = {
     toeOff:'티샷', approach:'어프로치', layup:'레이업', chip:'칩샷', putt:'퍼트',
     forBirdie:'버디 퍼트', forPar:'파 퍼트', forBogey:'보기 퍼트',
     forDouble:'더블 퍼트', forTriple:'트리플+ 퍼트',
-    typeTee:'TEE', typeAppr:'APPR', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'P',
+    typeTee:'TEE OFF', typeAppr:'APPROACH', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'PROVISIONAL',
     typeFB:'버디', typeFP:'파', typeFBo:'보기',
     provisional:'잠정구',
     pickerRows:d=>{
@@ -216,13 +220,14 @@ const STRINGS = {
     bogey:'보기', double:'더블보기', triple:'트리플+',
   },
   es:{
-    holeHero:h=>`HOYO ${h}`, parLabel:p=>`PAR ${p}`,
+    holeHero:h=>`HOYO ${h}`, holeLbl:'HOYO', parLabel:p=>`PAR ${p}`,
     hintMain:'Clic para subir fondo / Soltar imagen aquí',
     hintSub:'Solo vista previa — no se incluye en la exportación',
     distLabel:'Al hoyo', distUnit:'yds',
     totalLabel:'MOSTRAR TOTAL',
     finalScore:'PUNTUACIÓN FINAL (DELTA)',
     setScore:'ESTABLECER PUNT.',
+    everyShot:'CADA GOLPE',
     shotSection:'GOLPE', optionsTitle:'OPCIONES DE PANTALLA',
     shotOverlay:'Shot Overlay', scorecardOverlay:'Tarjeta',
     front9:'9 delant.', back9:'9 traseros', h18:'18 hoyos',
@@ -245,7 +250,7 @@ const STRINGS = {
     toeOff:'SALIDA', approach:'APROXIMACIÓN', layup:'LAYUP', chip:'CHIP', putt:'PUTT',
     forBirdie:'P/ BIRDIE', forPar:'P/ PAR', forBogey:'P/ BOGEY',
     forDouble:'P/ DOBLE', forTriple:'P/ TRIPLE+',
-    typeTee:'SALIDA', typeAppr:'APROX', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'P',
+    typeTee:'SALIDA', typeAppr:'APROX', typeLayup:'LAYUP', typeChip:'CHIP', typePutt:'PUTT', typeProv:'PROVISIONAL',
     typeFB:'P/BIRDIE', typeFP:'P/PAR', typeFBo:'P/BOGEY',
     provisional:'PROVISIONAL',
     pickerRows:d=>{
@@ -317,6 +322,7 @@ function applyLang(){
   if(logoEl) logoEl.innerHTML=LANG==='zh'?'⛳ 高尔夫<span>角标助手</span>':'⛳ GOLF <span>OVERLAY</span>';
   g('hint-main').textContent=T('hintMain');
   g('hint-sub').textContent=T('hintSub');
+  const _es=g('every-shot-title'); if(_es) _es.textContent=T('everyShot');
   g('dist-lbl').textContent=T('distLabel')+':';
   g('dist-unit').textContent=T('distUnit');
   g('total-lbl').textContent=T('totalLabel');
@@ -367,7 +373,7 @@ function applyLang(){
   const pmHistTitle=g('pm-hist-title'); if(pmHistTitle) pmHistTitle.textContent=LANG==='zh'?'历史球员':LANG==='ja'?'履歴':LANG==='ko'?'히스토리':'History';
   const pmAddInp=g('pm-add-input'); if(pmAddInp) pmAddInp.placeholder=LANG==='zh'?'球员姓名…':'Name…';
   const pmSearch=g('pm-hist-search'); if(pmSearch) pmSearch.placeholder=LANG==='zh'?'搜索球员…':'Search…';
-  const btnPM=g('btn-player-mgr'); if(btnPM) btnPM.textContent=LANG==='zh'?'管理…':LANG==='ja'?'管理…':LANG==='ko'?'관리…':'Manage…';
+  const btnPM=g('btn-player-mgr'); if(btnPM) btnPM.textContent=LANG==='zh'?'编辑':LANG==='ja'?'編集':LANG==='ko'?'편집':LANG==='es'?'EDITAR':'EDIT';
   const pSecLbl=g('player-section-lbl'); if(pSecLbl) pSecLbl.textContent=LANG==='zh'?'球员':LANG==='ja'?'プレーヤー':LANG==='ko'?'플레이어':'Players';
   const showPNLbl=g('sd-show-pname-lbl'); if(showPNLbl) showPNLbl.textContent=LANG==='zh'?'显示球员名字':'Show Player Name';
   if(typeof buildPlayerArea==='function') buildPlayerArea();
@@ -1362,6 +1368,7 @@ function initCanvas(){
   cvEl=document.getElementById('cv');
   dpr=window.devicePixelRatio||1;
   cvEl.addEventListener('mousedown',onDragStart);
+  cvEl.addEventListener('mousemove',onCursorUpdate);
   window.addEventListener('mousemove',onDragMove);
   window.addEventListener('mouseup',onDragEnd);
   cvEl.addEventListener('touchstart',onTouchStart,{passive:false});
@@ -1376,14 +1383,22 @@ function evPt(e){
 }
 
 function snapPos(px,py,ow,oh){
-  const sz=0.10;
-  const sx=cvCssW*sz,sy=cvCssH*sz,ex=cvCssW*(1-sz),ey=cvCssH*(1-sz);
-  // edge snaps
-  if(Math.abs(px-sx)<10) px=sx;
-  if(Math.abs(px+ow-ex)<10) px=ex-ow;
-  if(Math.abs(py-sy)<10) py=sy;
-  if(Math.abs(py+oh-ey)<10) py=ey-oh;
-  return{x:Math.max(0,Math.min(cvCssW-1,px)),y:Math.max(0,Math.min(cvCssH-1,py))};
+  // Only snap to safe zone edges when safe zone is enabled
+  if(S.safeZone){
+    const sz=parseFloat(S.szSize||10)/100;
+    const sx=cvCssW*sz,sy=cvCssH*sz,ex=cvCssW*(1-sz),ey=cvCssH*(1-sz);
+    if(Math.abs(px-sx)<8) px=sx;
+    if(Math.abs(px+ow-ex)<8) px=ex-ow;
+    if(Math.abs(py-sy)<8) py=sy;
+    if(Math.abs(py+oh-ey)<8) py=ey-oh;
+  }
+  // Canvas edge snaps (always)
+  if(Math.abs(px)<6) px=0;
+  if(Math.abs(px+ow-cvCssW)<6) px=cvCssW-ow;
+  if(Math.abs(py)<6) py=0;
+  if(Math.abs(py+oh-cvCssH)<6) py=cvCssH-oh;
+  // Allow free drag — only clamp to keep at least 10px visible
+  return{x:Math.max(-ow+10,Math.min(cvCssW-10,px)),y:Math.max(-oh+10,Math.min(cvCssH-10,py))};
 }
 
 // v4.5: center-snap for scorecard
@@ -1405,7 +1420,8 @@ function getSCDrawX(scale){
   if(pos.centered){
     return (cvCssW-w)/2;
   }
-  return pos.x*cvCssW;
+  if(pos.absX!==undefined) return pos.absX*cvCssW;
+  return pos.x*cvCssW-w/2; // pos.x is center-x, convert to left edge
 }
 
 function onDragStart(e){
@@ -1478,6 +1494,25 @@ function onDragEnd(e){
 }
 function onTouchStart(e){ if(e.touches.length===1) onDragStart(e); }
 function onTouchMove(e){ if(e.touches.length===1) onDragMove(e); }
+
+function onCursorUpdate(e){
+  if(dragging) return;
+  const rect=cvEl.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)/rect.width*cvCssW;
+  const my=(e.clientY-rect.top)/rect.height*cvCssH;
+  const scale=cvCssW/1920;
+  // Check if over scorecard course name area
+  if(S.showScore){
+    const scX=getSCDrawX(scale);
+    const scY=S.scorecardPos[S.ratio].y*cvCssH;
+    const sw=getSCWidth(scale);
+    const nameRowH=40*scale;
+    if(mx>=scX+sw/2&&mx<=scX+sw&&my>=scY&&my<=scY+nameRowH){
+      cvEl.style.cursor='text'; return;
+    }
+  }
+  cvEl.style.cursor='move';
+}
 
 // ── RENDER ──
 function render(){
@@ -1741,6 +1776,7 @@ function expSanitize(s){ return (s||'').replace(/[^\w\u4e00-\u9fa5\u3040-\u30ff\
 // Capitalize first letter of each underscore-separated word, lowercase the rest
 function expTitleCase(s){ return s.split('_').map(w=>w?w[0].toUpperCase()+w.slice(1).toLowerCase():'').join('_'); }
 function expResLabel(){ const r=S.exportRes||2160; return r>=2160?'4K':r>=1440?'1440P':'1080P'; }
+function expModeLabel(){ return S.displayMode==='gross'?'Gross':'ToPar'; }
 function expCourse(){ return expTitleCase(expSanitize(S.courseName)||'Course'); }
 function expPlayer(){ if(S.currentPlayerId){const p=(S.players||[]).find(p=>p.id===S.currentPlayerId);if(p)return expTitleCase(expSanitize(p.name));} return 'Session'; }
 function expShotType(st){ return expTitleCase(st||'Shot'); }
@@ -2418,7 +2454,8 @@ function init(){
   document.querySelectorAll('[data-ui-theme]').forEach(b=>b.classList.toggle('active',b.dataset.uiTheme===S.uiTheme));
   applyBg();
   if(typeof buildPlayerArea==='function') buildPlayerArea();
-  render();
+  // Defer first render to ensure layout is settled — prevents position jumping
+  requestAnimationFrame(()=>{ render(); requestAnimationFrame(render); });
 
   // Mobile init
   initMobSwipe();

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Golf Overlay Tool v9.2.0</title>
-<link rel="stylesheet" href="./css/overlay.css?v=9.2.0">
+<title>Golf Overlay Tool v9.4.2</title>
+<link rel="stylesheet" href="./css/overlay.css?v=9.4.2">
 <script>
 /* Narrow-screen detection: use screen.width (physical device pixels)
    — immune to Safari "Request Desktop Website" which inflates viewport to ~980px */
@@ -66,12 +66,6 @@
           <div class="nav-row" id="nav-row1"></div>
           <div class="nav-row" id="nav-row2"></div>
         </div>
-        <div id="nav-footer">
-          <div class="mode-wrap">
-            <button class="mode-btn" id="mode-tp" onclick="setMode('topar')">To Par</button>
-            <button class="mode-btn" id="mode-gr" onclick="setMode('gross')">Gross</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -81,7 +75,7 @@
     <!-- Hole + Par (vertical) + Next -->
     <div id="hole-banner">
       <div id="hole-hero">
-        <span id="hole-num-big">HOLE 1</span>
+        <span id="hole-num-big"><span id="hole-lbl">HOLE</span><span id="hole-num">1</span></span>
         <div class="hole-par-col">
           <span id="par-hero-lbl">Par</span>
           <div class="par-grp">
@@ -90,8 +84,7 @@
             <button class="par-btn" id="par5" onclick="setPar(5)">5</button>
           </div>
         </div>
-        <span style="flex:1"></span>
-        <button id="btn-next-hole-top" onclick="gotoNextHole()">NEXT →</button>
+        <button id="btn-next-hole-top" onclick="gotoNextHole()">NEXT</button>
       </div>
     </div>
 
@@ -99,25 +92,28 @@
     <div id="player-section" class="sec">
       <div id="player-mgr-row">
         <span id="player-section-lbl" class="stitle" style="margin-bottom:0;flex:1">Players</span>
-        <button id="btn-player-mgr" onclick="openPlayerManager()">Manage…</button>
+        <button id="btn-player-mgr" onclick="openPlayerManager()">Edit</button>
       </div>
+      <hr style="border:none;border-top:1px solid var(--panel-border);margin:6px 0">
       <div id="player-btn-grid"></div>
     </div>
 
     <!-- Shot (with To Pin inside) -->
-    <div class="sec">
-      <div class="dist-row" style="margin-top:0;margin-bottom:7px">
-        <span id="dist-lbl" style="font-size:12px;color:var(--t2);white-space:nowrap;flex-shrink:0"></span>
-        <input type="number" id="inp-dist" placeholder="" min="0" max="999" onfocus="this.select()" style="width:72px;height:34px;flex-shrink:0;font-size:14px">
-        <span class="dist-unit" id="dist-unit">yds</span>
+    <div class="sec" id="shot-section">
+      <div class="stitle" id="every-shot-title">EVERY SHOT</div>
+      <div class="dist-row" style="margin-top:0;margin-bottom:10px">
+        <span id="dist-lbl" class="stitle" style="margin-bottom:0;flex-shrink:0"></span>
+        <input type="number" id="inp-dist" placeholder="" min="0" max="999" onfocus="this.select()" style="width:66px;height:28px;flex-shrink:0;font-size:12px">
+        <span class="dist-unit tbtn" id="dist-unit" style="cursor:default;padding:0;min-height:0">yds</span>
       </div>
-      <div class="shot-nav">
-        <button class="shot-nav-btn" id="btn-prev">◀ PREV</button>
+      <div class="shot-nav" style="margin-bottom:8px">
+        <button class="shot-nav-btn" id="btn-prev">◀</button>
         <div id="shot-btns"></div>
-        <button class="shot-nav-btn" id="btn-next">NEXT ▶</button>
+        <button class="shot-nav-btn" id="btn-next">▶</button>
       </div>
-      <div id="type-row1" class="type-row"></div>
-      <div id="type-row2" class="type-row"></div>
+      <div id="type-row1" class="type-row" style="margin-bottom:4px"></div>
+      <div id="type-row2" class="type-row" style="margin-bottom:4px"></div>
+      <div id="type-row3" class="type-row"></div>
     </div>
 
     <!-- Export Section -->
@@ -315,6 +311,11 @@
       <div class="sd-row">
         <label class="ptool-toggle-lbl"><input type="checkbox" id="chk-total"> <span id="total-lbl">Total</span></label>
       </div>
+      <div class="sd-row" style="gap:4px;margin-top:4px">
+        <span style="font-size:11px;color:var(--t2);margin-right:4px" id="sd-disp-lbl">Display:</span>
+        <button class="mode-btn" id="mode-tp" onclick="setMode('topar')">To Par</button>
+        <button class="mode-btn" id="mode-gr" onclick="setMode('gross')">Gross</button>
+      </div>
     </div>
     <!-- Aspect Ratio -->
     <div class="sd-sec" id="sd-ratio-sec">
@@ -409,8 +410,8 @@
 <div id="mini-toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./js/scoreboard.js?v=9.2.0"></script>
-<script src="./js/ui.js?v=9.2.0"></script>
-<script src="./js/app.js?v=9.2.0"></script>
+<script src="./js/scoreboard.js?v=9.4.2"></script>
+<script src="./js/ui.js?v=9.4.2"></script>
+<script src="./js/app.js?v=9.4.2"></script>
 </body>
 </html>

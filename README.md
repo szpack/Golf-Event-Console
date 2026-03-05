@@ -117,6 +117,90 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v9.4.2 — 2026-03-06
+- Fix: 添加缺失的 expModeLabel() 函数，修复 18 SC ZIP 导出报错
+
+### v9.4.1 — 2026-03-06
+- 击球类型按钮 flex:1 均分行宽、nowrap 禁止换行、字号 10px、padding 缩减，确保 FOR BIRDIE/FOR PAR/FOR BOGEY 单行显示
+
+### v9.4.0 — 2026-03-06
+- 击球类型全称：TEE OFF / APPROACH / PROVISIONAL，重排为三行布局
+- 杆数进度条改为 24×24 正方形，压缩横向空间
+- HOLE 区 gap 16→10px，去掉 Par col 左边距，NEXT 去掉箭头
+- Par 选中态改为白底黑字（与杆数进度条 .cur 一致）
+
+### v9.3.8 — 2026-03-06
+- TO PIN 标签改用 .stitle 样式，与 EVERY SHOT 同级大小
+- PREV/NEXT 按钮去掉英文仅保留箭头 ◀ ▶，宽度 58→30px
+- 右侧面板宽度 340→300px，整体更紧凑
+
+### v9.3.7 — 2026-03-06
+- EVERY SHOT 标题改用 .stitle 样式，与 PLAYERS/EXPORT 统一
+- To Pin 标签和 yds 改用 .tbtn 样式，与 TEE/APPR 等按钮统一
+- 击球区各行间距加大（dist-row mb 10px, shot-nav mb 8px, type-row1 mb 5px）
+
+### v9.3.6 — 2026-03-06
+- Fix: 计分卡拖动失灵 — getSCDrawX 未正确转换 center-x 为左边缘，命中区域偏移半个宽度
+- 计分卡"球场名字"区域鼠标光标改为 text（I-beam），其余区域保持 move
+
+### v9.3.5 — 2026-03-06
+- Fix: 安全区磁吸仅在 Safe Zone 开启时生效，关闭时击球信息版可自由拖动
+- 画布边缘轻磁吸（6px），拖动范围放宽至仅需保留 10px 可见
+- Fix: 初始化渲染延迟至 requestAnimationFrame，防止信息版位置跳动
+
+### v9.3.4 — 2026-03-06
+- Fix: applyLang 中按钮文字从 "Manage…" 改为 "EDIT"（多语言：编辑/編集/편집/EDITAR）
+
+### v9.3.3 — 2026-03-06
+- Manage… 改为 Edit
+- 球员行布局：名字占 50%，delta 控件（− 杆数 +）占 50% 居中排列
+- Delta 数字加粗 800/15px，±按钮加大 18px/30×32
+- PLAYERS 标题与球员列表之间增加分隔线
+
+### v9.3.2 — 2026-03-06
+- HOLE/洞号恢复上下两行布局（HOLE 28px + 洞号 36px）
+- Par 按钮字号 22→20px，按钮尺寸 40×36→38×34
+
+### v9.3.1 — 2026-03-06
+- HOLE 标签改为 28px（比洞号 36px 小一号），同行 baseline 对齐
+
+### v9.3.0 — 2026-03-06
+- HOLE X 拆分为两行：HOLE 标签 12px + 洞号 36px，视觉层次更清晰
+- Par 按钮未选中改为透明背景（融入 banner），选中改为 accent-green 绿底白字
+- 多语言 holeLbl 支持（中文"第·洞"、西语"HOYO"等）
+
+### v9.2.8 — 2026-03-06
+- Par 按钮字号强制 22px/900 weight（!important 防止被通用 .par-btn font 简写覆盖）
+- 按钮尺寸微调 40×36px 配合更大字号
+
+### v9.2.7 — 2026-03-06
+- Par 按钮字号 18→20px 加粗加大
+- Par 区域增加 margin-left:8px，与 HOLE 拉开间距
+- Par 区域 flex:1 填充中间空间，NEXT 自然靠右，三区域排列协调
+
+### v9.2.6 — 2026-03-06
+- HOLE 字号 36→34px，底部对齐（align-items:flex-end）
+- Par 按钮、NEXT 按钮与 HOLE 数字下方水平对齐，NEXT 高度匹配 34px
+- hero 区 gap 增至 16px，元素间距更宽松
+
+### v9.2.5 — 2026-03-06
+- HOLE 数字居中显示（min-width:60px, text-align:center）
+- Par 按钮加大至 38×34px / 18px 字号，选中白底金字，未选中黑底金字
+- Par 按钮间距从 3px 增至 6px，hero 区整体 gap 从 10px 增至 14px
+
+### v9.2.4 — 2026-03-06
+- Par 3/4/5 按钮改为白底金字（#FFD700），选中时仍为绿底白字
+- NEXT 按钮改为绿底白字（#4CAF50），按压加深
+
+### v9.2.3 — 2026-03-06
+- To Par / Gross 显示模式按钮从左侧导航区移入 Settings 抽屉 Overlay 分组
+
+### v9.2.2 — 2026-03-06
+- "EVERY SHOT" 改为全大写，与 "To Pin" 同行显示，中间弹性留空
+
+### v9.2.1 — 2026-03-06
+- Shot 区块顶部新增 "Every Shot" 标题（多语言），字体 13px 加粗突出
+
 ### v9.2.0 — 2026-03-06
 - 击球类型按钮（TEE OFF/PUTT/FOR PAR 等）改为球员名字按钮风格：无边框、文字高亮
 - Export 区两个绿色批量导出按钮统一宽度

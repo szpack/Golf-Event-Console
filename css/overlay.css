@@ -25,7 +25,8 @@ html.light .snum-btn.cur{background:var(--mg);color:#fff;border-color:var(--mg)}
 html.light #mini-toast{background:rgba(240,250,240,.95);color:#1a5e3b;border-color:#b0d8b0}
 html.light #mini-toast.err-toast{background:rgba(255,240,240,.95);color:#a00;border-color:#e0a0a0}
 html.light #btn-new{background:#c0392b;border-color:#a02e22;color:#fff}
-html.light .delta-adj-btn:active,html.light .shot-nav-btn:active,html.light #btn-next-hole-top:active,html.light .pr-adj:active{background:rgba(0,0,0,.06)}
+html.light .delta-adj-btn:active,html.light .shot-nav-btn:active,html.light .pr-adj:active{background:rgba(0,0,0,.06)}
+html.light #btn-next-hole-top:active{background:#388E3C}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
@@ -50,7 +51,7 @@ select,input[type=text],input[type=number]{background:var(--s2);border:1px solid
 select:focus,input:focus{border-color:#2ea043}
 
 /* ── MAIN ── */
-#main{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden}
+#main{display:grid;grid-template-columns:1fr 300px;flex:1;overflow:hidden}
 
 /* ── LEFT ── */
 #left{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--panel-border)}
@@ -128,22 +129,25 @@ select:focus,input:focus{border-color:#2ea043}
 
 /* hole hero — vertical par + next */
 #hole-banner{padding:12px 14px 10px;background:linear-gradient(135deg,#1e2820 0%,#1a1e1a 100%);border-bottom:1px solid var(--panel-border);flex-shrink:0}
-#hole-hero{display:flex;align-items:center;gap:10px;margin-bottom:0}
-#hole-num-big{font-family:Impact,'Arial Black',sans-serif;font-size:36px;color:#fff;line-height:1;letter-spacing:1px}
-.hole-par-col{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+#hole-hero{display:flex;align-items:flex-end;gap:10px;margin-bottom:0}
+#hole-num-big{font-family:Impact,'Arial Black',sans-serif;color:#fff;letter-spacing:1px;text-align:center;min-width:56px;display:flex;flex-direction:column;align-items:center;line-height:1}
+#hole-lbl{font-size:28px;opacity:.7}
+#hole-num{font-size:36px}
+.hole-par-col{display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:1}
 #par-hero-lbl{font:700 10px/1 inherit;color:var(--accent-gold);text-transform:uppercase;letter-spacing:.5px}
-#hole-hero .par-grp{gap:3px}
-#hole-hero .par-btn{width:34px;height:30px;font:800 16px/1 inherit;color:var(--accent-gold);background:transparent;border-color:var(--panel-border)}
-#hole-hero .par-btn.active{background:var(--accent-green);border-color:var(--accent-green);color:#fff}
-#btn-next-hole-top{height:42px;padding:0 16px;border-radius:8px;border:1px solid var(--panel-border);background:transparent;color:var(--text-primary);font:700 13px/1 inherit;cursor:pointer;white-space:nowrap;transition:background 80ms ease-out}
-#btn-next-hole-top:active{background:rgba(255,255,255,.07)}
+#hole-hero .par-grp{gap:6px}
+#hole-hero .par-btn{width:38px;height:34px;font-size:20px!important;font-weight:900!important;color:#FFD700;background:transparent;border-color:rgba(255,215,0,.25)}
+#hole-hero .par-btn.active{background:#fff;border-color:#fff;color:#111}
+#btn-next-hole-top{height:34px;padding:0 16px;border-radius:8px;border:1px solid #43a047;background:#4CAF50;color:#fff;font:700 13px/1 inherit;cursor:pointer;white-space:nowrap;transition:background 80ms ease-out}
+#btn-next-hole-top:active{background:#388E3C}
 /* player row with inline delta */
-.player-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;min-height:34px}
-.player-row .pr-name{flex:1;min-width:0;font:600 13px/1 inherit;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;padding:4px 6px;border-radius:5px;transition:background 80ms}
+.player-row{display:flex;align-items:center;gap:0;margin-bottom:4px;min-height:34px}
+.player-row .pr-name{flex:0 0 50%;min-width:0;font:600 13px/1 inherit;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;padding:4px 6px;border-radius:5px;transition:background 80ms}
 .player-row .pr-name:hover{background:var(--s2)}
 .player-row .pr-name.active{color:var(--text-primary);font-weight:700}
-.player-row .pr-delta-btn{min-width:52px;height:30px;border-radius:6px;border:none;font:700 13px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.player-row .pr-adj{width:28px;height:30px;border-radius:5px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 16px/1 inherit;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.player-row .pr-delta-wrap{flex:0 0 50%;display:flex;align-items:center;justify-content:center;gap:6px}
+.player-row .pr-delta-btn{min-width:52px;height:32px;border-radius:6px;border:none;font:800 15px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.player-row .pr-adj{width:30px;height:32px;border-radius:5px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 18px/1 inherit;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .player-row .pr-adj:active{background:rgba(255,255,255,.07)}
 /* export minor button (single) — smaller, outlined, subtle */
 .exp-minor-btn{flex:0 0 110px;width:110px;height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:600 10px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;transition:background 80ms ease-out}
@@ -211,19 +215,19 @@ select:focus,input:focus{border-color:#2ea043}
 
 /* shot nav */
 .shot-nav{display:flex;align-items:center;gap:5px;margin-bottom:5px}
-.shot-nav-btn{width:58px;flex-shrink:0;height:26px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 8px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;transition:background 80ms ease-out,color 80ms ease-out}
+.shot-nav-btn{width:30px;flex-shrink:0;height:26px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 10px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 80ms ease-out,color 80ms ease-out}
 .shot-nav-btn:active{background:rgba(255,255,255,.07)}
 /* shot number buttons */
 #shot-btns{flex:1;display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
-.snum-btn{flex:1;min-width:22px;max-width:34px;height:26px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 11px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 80ms ease-out,color 80ms ease-out,border-color 80ms ease-out}
+.snum-btn{flex:0 0 auto;width:24px;height:24px;border-radius:5px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 10px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 80ms ease-out,color 80ms ease-out,border-color 80ms ease-out}
 .snum-btn.cur{background:#fff;color:#1B5E3B;border-color:#fff}
 .snum-btn.past{background:rgba(255,255,255,.18);color:var(--t1);border-color:transparent}
 .snum-btn.future{background:rgba(255,255,255,.05);color:var(--t3);border-color:transparent}
 .snum-btn.unused{background:transparent;color:var(--t3);border:1px dashed var(--panel-border);opacity:.45;cursor:default}
 .snum-btn:active{opacity:.7}
 /* type buttons — uppercase */
-.type-row{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:3px}
-.tbtn{padding:4px 8px;border-radius:5px;border:none;background:transparent;color:var(--text-muted);font:600 11px/1 inherit;cursor:pointer;min-height:24px;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;transition:background 80ms ease-out,color 80ms ease-out}
+.type-row{display:flex;gap:3px;flex-wrap:nowrap;margin-bottom:3px}
+.tbtn{padding:4px 6px;border-radius:5px;border:none;background:transparent;color:var(--text-muted);font:600 10px/1 inherit;cursor:pointer;min-height:24px;white-space:nowrap;text-transform:uppercase;letter-spacing:.2px;transition:background 80ms ease-out,color 80ms ease-out;flex:1;text-align:center}
 .tbtn:hover{background:var(--s2)}
 .tbtn.active{color:var(--text-primary);font-weight:700;background:var(--s2)}
 .auto-badge{font-size:9px;padding:1px 5px;border-radius:3px;background:#2a3a2a;color:#5c8c5c;border:1px solid #3a5a3a;margin-left:4px;vertical-align:middle}
@@ -466,9 +470,11 @@ html.narrow .stat-card .sc-num{font-size:11px}
 /* ── Right panel ── */
 html.narrow #right{overflow-y:visible}
 html.narrow #hole-banner{padding:8px 10px 6px}
-html.narrow #hole-num-big{font-size:24px}
+html.narrow #hole-lbl{font-size:18px}
+html.narrow #hole-num{font-size:24px}
+html.narrow #hole-num-big{min-width:42px}
 html.narrow #par-hero-lbl{font-size:12px;padding-bottom:6px}
-html.narrow #hole-hero .par-btn{width:34px;height:34px;font-size:18px}
+html.narrow #hole-hero .par-btn{width:36px;height:32px;font-size:17px}
 html.narrow .sec{padding:8px 10px 10px}
 html.narrow .stitle{font-size:11px;margin-bottom:6px}
 
