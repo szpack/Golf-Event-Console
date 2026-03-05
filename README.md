@@ -117,6 +117,9 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v6.7.4 — 2026-03-05
+- 为 CSS/JS 链接添加版本查询参数（?v=6.7.4），解决 GitHub Pages CDN 缓存旧样式导致布局不一致的问题
+
 ### v6.7.3 — 2026-03-05
 - Overlay Style 主题切换按钮移至计分卡导航区左侧，改为竖排列，右侧 border 分隔；hole cards 导航区居中显示
 
