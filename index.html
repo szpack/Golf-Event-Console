@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Golf Overlay Tool v9.4.2</title>
-<link rel="stylesheet" href="./css/overlay.css?v=9.4.2">
+<title>Golf Overlay Tool v9.6.4</title>
+<link rel="stylesheet" href="./css/overlay.css?v=9.6.4">
 <script>
 /* Narrow-screen detection: use screen.width (physical device pixels)
    — immune to Safari "Request Desktop Website" which inflates viewport to ~980px */
@@ -19,7 +19,7 @@
 <!-- HEADER -->
 <div id="hdr">
   <div class="logo" id="logo-text">⛳ GOLF <span>OVERLAY</span></div>
-  <span class="logo-meta">v9.4.2<br><span id="logo-author" style="font-size:8px;color:var(--t3);letter-spacing:0">szpack@qq.com</span></span>
+  <span class="logo-meta">v9.6.4<br><span id="logo-author" style="font-size:8px;color:var(--t3);letter-spacing:0">szpack@qq.com</span></span>
   <span style="flex:1"></span>
   <div id="lang-wrap">
     <button id="btn-lang" onclick="toggleLangMenu()">🇺🇸 EN</button>
@@ -59,14 +59,9 @@
       <span style="flex:1"></span>
     </div>
 
-    <!-- Scorecard Nav -->
+    <!-- Scorecard Nav — PGA style table -->
     <div id="nav">
-      <div id="nav-outer">
-        <div id="nav-rows-col">
-          <div class="nav-row" id="nav-row1"></div>
-          <div class="nav-row" id="nav-row2"></div>
-        </div>
-      </div>
+      <div id="sc-grid"></div>
     </div>
   </div>
 
@@ -410,8 +405,8 @@
 <div id="mini-toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./js/scoreboard.js?v=9.4.2"></script>
-<script src="./js/ui.js?v=9.4.2"></script>
-<script src="./js/app.js?v=9.4.2"></script>
+<script src="./js/scoreboard.js?v=9.6.4"></script>
+<script src="./js/ui.js?v=9.6.4"></script>
+<script src="./js/app.js?v=9.6.4"></script>
 </body>
 </html>

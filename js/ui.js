@@ -84,8 +84,8 @@ function buildPlayerArea(){
   const hi=S.currentHole;
   players.forEach(p=>{
     const row=document.createElement('div');
-    row.className='player-row';
     const isCur=p.id===S.currentPlayerId;
+    row.className='player-row'+(isCur?' pr-active':'');
     // name
     const nm=document.createElement('div');
     nm.className='pr-name'+(isCur?' active':'');
@@ -225,61 +225,187 @@ function miniToast(msg,isErr){
   t._timer=setTimeout(()=>t.classList.remove('show'),isErr?2500:1800);
 }
 
-// ── HOLE NAV ──
+// ── HOLE NAV — PGA-style scorecard grid ──
 function buildHoleNav(){
-  const f9P=S.holes.slice(0,9).reduce((a,h)=>a+h.par,0);
-  const f9G=S.holes.slice(0,9).reduce((a,h)=>a+h.par+(h.delta??0),0);
-  const b9P=S.holes.slice(9,18).reduce((a,h)=>a+h.par,0);
-  const b9G=S.holes.slice(9,18).reduce((a,h)=>a+h.par+(h.delta??0),0);
+  const grid=document.getElementById('sc-grid');
+  if(!grid) return;
+  grid.innerHTML='';
 
-  ['nav-row1','nav-row2'].forEach((id,row)=>{
-    const cont=document.getElementById(id); cont.innerHTML='';
-    for(let i=row*9;i<row*9+9;i++){
-      const h=S.holes[i];
-      const card=document.createElement('div');
-      card.className='hcard '+deltaCardClass(h.delta);
-      if(i===S.currentHole) card.classList.add('active');
-      let sc='—';
-      if(h.delta!==null) sc=S.displayMode==='topar'?fmtDeltaDisplay(h.delta):String(h.par+h.delta);
-      card.innerHTML=`<div class="hn">${i+1}</div><div class="hp">P${h.par}</div><div class="hs">${sc}</div>`;
-      card.onclick=()=>{
-        // v5.2: switching holes resets last-shot manual type (exit FOR mode → result mode)
-        if(S.currentHole!==i){
-          const prev=S.holes[S.currentHole];
-          const pg=getGross(prev);
-          if(pg&&pg>0) delete prev.manualTypes[pg-1];
-        }
-        S.currentHole=i;
-        S.scorecardSummary=null; // return to hole view
-        resetAllShotIndex(i);
-        render(); scheduleSave();
-      };
-      cont.appendChild(card);
+  const ci=S.currentHole;
+  // Helpers
+  const sumPar=(a,b)=>S.holes.slice(a,b).reduce((s,h)=>s+h.par,0);
+  const sumGross=(pid,a,b)=>{
+    let s=0;
+    for(let i=a;i<b;i++){
+      const d=getPlayerHoleDelta(pid,i);
+      if(d!==null) s+=S.holes[i].par+d;
     }
-    if(row===0){
-      const fc=makeStatCard('F',f9P,f9G,S.scorecardSummary==='out');
-      fc.style.cursor='pointer';
-      fc.onclick=()=>{ S.scorecardSummary='out'; render(); scheduleSave(); };
-      cont.appendChild(fc);
-    } else {
-      const bc=makeStatCard('B',b9P,b9G,S.scorecardSummary==='in');
-      bc.style.cursor='pointer';
-      bc.onclick=()=>{ S.scorecardSummary='in'; render(); scheduleSave(); };
-      cont.appendChild(bc);
-      const tc=makeStatCard('T',f9P+b9P,f9G+b9G,S.scorecardSummary==='tot');
-      tc.style.cursor='pointer';
-      tc.onclick=()=>{ S.scorecardSummary='tot'; render(); scheduleSave(); };
-      cont.appendChild(tc);
+    return s;
+  };
+  const sumDelta=(pid,a,b)=>{
+    let s=0;
+    for(let i=a;i<b;i++){
+      const d=getPlayerHoleDelta(pid,i);
+      if(d!==null) s+=d;
+    }
+    return s;
+  };
+  const countPlayed=(pid,a,b)=>{
+    let c=0;
+    for(let i=a;i<b;i++) if(getPlayerHoleDelta(pid,i)!==null) c++;
+    return c;
+  };
+
+  const f9P=sumPar(0,9), b9P=sumPar(9,18);
+
+  // Cell factory — col: hole index (0-17) for column hover/active
+  function cell(txt,cls,onclick,col){
+    const d=document.createElement('div');
+    d.className='sg-cell'+(cls?' '+cls:'');
+    d.textContent=txt;
+    if(onclick) d.onclick=onclick;
+    if(col!==undefined){
+      d.dataset.col=col;
+      if(col===ci) d.classList.add('sg-col-active');
+    }
+    return d;
+  }
+
+  // Click handler for hole cells
+  function holeClick(i){
+    return ()=>{
+      if(S.currentHole!==i){
+        const prev=S.holes[S.currentHole];
+        const pg=getGross(prev);
+        if(pg&&pg>0) delete prev.manualTypes[pg-1];
+      }
+      S.currentHole=i;
+      S.scorecardSummary=null;
+      resetAllShotIndex(i);
+      render(); scheduleSave();
+    };
+  }
+
+  // ── Row 1: HOLE header ──
+  grid.appendChild(cell('HOLE','sg-hdr sg-label'));
+  for(let i=0;i<9;i++) grid.appendChild(cell(String(i+1),'sg-hdr'+(i===ci?' sg-active':''),holeClick(i),i));
+  grid.appendChild(cell('OUT','sg-hdr sg-sub',()=>{ S.scorecardSummary='out'; render(); scheduleSave(); }));
+  for(let i=9;i<18;i++) grid.appendChild(cell(String(i+1),'sg-hdr'+(i===ci?' sg-active':''),holeClick(i),i));
+  grid.appendChild(cell('IN','sg-hdr sg-sub',()=>{ S.scorecardSummary='in'; render(); scheduleSave(); }));
+  grid.appendChild(cell('TOT','sg-hdr sg-sub',()=>{ S.scorecardSummary='tot'; render(); scheduleSave(); }));
+
+  // ── Row 2: PAR (same bg as HOLE header) ──
+  grid.appendChild(cell('PAR','sg-hdr sg-label sg-par-label'));
+  for(let i=0;i<9;i++) grid.appendChild(cell(String(S.holes[i].par),'sg-hdr sg-par-val',holeClick(i),i));
+  grid.appendChild(cell(String(f9P),'sg-hdr sg-sub'));
+  for(let i=9;i<18;i++) grid.appendChild(cell(String(S.holes[i].par),'sg-hdr sg-par-val',holeClick(i),i));
+  grid.appendChild(cell(String(b9P),'sg-hdr sg-sub'));
+  grid.appendChild(cell(String(f9P+b9P),'sg-hdr sg-sub'));
+
+  // ── Player score rows ──
+  const players=(S.players&&S.players.length>0)?S.players:null;
+
+  function pgaScoreCell(delta,txt,holeIdx,pid){
+    const d=document.createElement('div');
+    d.className='sg-cell sg-score-cell';
+    d.dataset.col=holeIdx;
+    if(holeIdx===ci) d.classList.add('sg-col-active');
+    const clickFn=()=>{
+      if(pid&&pid!==effectivePlayerId()) switchToPlayer(pid);
+      holeClick(holeIdx)();
+    };
+    if(delta===null){
+      d.classList.add('sg-empty');
+      d.textContent='·';
+      d.onclick=clickFn;
+      return d;
+    }
+    const span=document.createElement('span');
+    span.className='sg-score';
+    span.textContent=txt;
+    if(delta<=-2) span.classList.add('sg-eagle');
+    else if(delta===-1) span.classList.add('sg-birdie');
+    else if(delta===0) span.classList.add('sg-par-score');
+    else if(delta===1) span.classList.add('sg-bogey');
+    else if(delta===2) span.classList.add('sg-dbl-bogey');
+    else if(delta>=3) span.classList.add('sg-triple');
+    d.appendChild(span);
+    d.onclick=clickFn;
+    return d;
+  }
+
+  function subCell(pid,a,b,isSummary){
+    const played=countPlayed(pid,a,b);
+    const d=document.createElement('div');
+    d.className='sg-cell sg-sub';
+    if(played>0){
+      d.textContent=S.displayMode==='topar'?fmtDeltaDisplay(sumDelta(pid,a,b)):String(sumGross(pid,a,b));
+    } else { d.textContent='·'; }
+    if(isSummary) d.onclick=()=>{ S.scorecardSummary=isSummary; render(); scheduleSave(); };
+    return d;
+  }
+
+  function addPlayerRow(pid,name,isCurrent){
+    // Label
+    const lbl=cell(name,'sg-label sg-player'+(isCurrent?' sg-player-active':''));
+    lbl.onclick=()=>switchToPlayer(pid);
+    grid.appendChild(lbl);
+
+    // Front 9
+    for(let i=0;i<9;i++){
+      const delta=getPlayerHoleDelta(pid,i);
+      const txt=delta!==null?(S.displayMode==='topar'?fmtDeltaDisplay(delta):String(S.holes[i].par+delta)):'';
+      grid.appendChild(pgaScoreCell(delta,txt,i,pid));
+    }
+    grid.appendChild(subCell(pid,0,9,'out'));
+
+    // Back 9
+    for(let i=9;i<18;i++){
+      const delta=getPlayerHoleDelta(pid,i);
+      const txt=delta!==null?(S.displayMode==='topar'?fmtDeltaDisplay(delta):String(S.holes[i].par+delta)):'';
+      grid.appendChild(pgaScoreCell(delta,txt,i,pid));
+    }
+    grid.appendChild(subCell(pid,9,18,'in'));
+
+    // Total
+    const totalPlayed=countPlayed(pid,0,18);
+    const tot=document.createElement('div');
+    tot.className='sg-cell sg-sub';
+    if(totalPlayed>0){
+      tot.textContent=String(sumGross(pid,0,18));
+    } else { tot.textContent='·'; }
+    tot.style.fontWeight='700';
+    tot.onclick=()=>{ S.scorecardSummary='tot'; render(); scheduleSave(); };
+    grid.appendChild(tot);
+  }
+
+  if(players){
+    players.forEach(p=>addPlayerRow(p.id,p.name,p.id===S.currentPlayerId));
+  } else {
+    // Session mode — single unnamed row
+    const epid=effectivePlayerId();
+    addPlayerRow(epid,'—',true);
+  }
+
+  // ── Column hover highlight ──
+  grid.addEventListener('mouseover',e=>{
+    const t=e.target.closest('[data-col]');
+    if(!t) return;
+    const col=t.dataset.col;
+    if(grid._hoverCol===col) return;
+    // clear previous
+    if(grid._hoverCol!==undefined) grid.querySelectorAll('[data-col="'+grid._hoverCol+'"]').forEach(c=>c.classList.remove('sg-col-hover'));
+    grid._hoverCol=col;
+    grid.querySelectorAll('[data-col="'+col+'"]').forEach(c=>c.classList.add('sg-col-hover'));
+  });
+  grid.addEventListener('mouseleave',()=>{
+    if(grid._hoverCol!==undefined){
+      grid.querySelectorAll('[data-col="'+grid._hoverCol+'"]').forEach(c=>c.classList.remove('sg-col-hover'));
+      grid._hoverCol=undefined;
     }
   });
-  if(typeof narrowAutoScrollNav==='function') narrowAutoScrollNav();
-}
 
-function makeStatCard(lbl,par,gross,isActive){
-  const el=document.createElement('div');
-  el.className='stat-card'+(isActive?' stat-active':'');
-  el.innerHTML=`<div class="sc-lbl">${lbl}</div><div class="sc-val"><span style="color:var(--gold);font-size:9px">${par}</span><br><span class="sc-num">${gross}</span></div>`;
-  return el;
+  if(typeof narrowAutoScrollNav==='function') narrowAutoScrollNav();
 }
 
 // ── DELTA BUTTON ──

@@ -396,7 +396,7 @@ function defaultScorecardCenter(ratio){
 function defState(){
   return{
     playerName:'PLAYER', courseName:'', currentHole:0, displayMode:'topar',
-    ratio:'16:9', showShot:true, showScore:false, scoreRange:'18',
+    ratio:'16:9', showShot:true, showScore:true, scoreRange:'18',
     scorecardSummary:null,
     showTotal:false, showDist:false,
     exportRes:2160, bgOpacity:1.0, overlayOpacity:1.0,
@@ -537,6 +537,8 @@ let saveTimer;
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(doSave,350); }
 function doSave(){
   try{
+    // Sync current player's live S.holes back to byPlayer before saving
+    saveCurrentPlayerData();
     const forStorage={...S,userBg:null};
     localStorage.setItem(LS_KEY,JSON.stringify(forStorage));
     if(S.userBg){
@@ -1609,13 +1611,9 @@ function drawShotOverlay(ctx,X,Y,scale){
   // ── ROW1: player name + total badge ──
   const rx=X+colW+rpad, rW=W-colW-2*rpad;
 
-  // Pre-compute result mode for context-aware total (result=include current, in-play=exclude current)
-  const _si=h.shotIndex, _gross=getGross(h);
-  const _isLast=_gross!==null&&_si===_gross-1;
-  const _isForMode=_isLast&&!!h.manualTypes[_si]&&(h.shots[_si]?.type||'').startsWith('FOR_');
-  const _isResultMode=_isLast&&!_isForMode;
+  // Total badge: show holes 1..N (current hole inclusive)
   const _ci=S.currentHole;
-  const _totalHoles=S.holes.slice(0,_isResultMode?_ci+1:_ci).filter(x=>x.delta!==null);
+  const _totalHoles=S.holes.slice(0,_ci+1).filter(x=>x.delta!==null);
   const _ctxTd=_totalHoles.reduce((a,x)=>a+x.delta,0);
   const _ctxTg=_totalHoles.reduce((a,x)=>a+x.par+x.delta,0);
   const _showTotal=S.showTotal&&_totalHoles.length>0;
@@ -2410,9 +2408,9 @@ function toggleNarrowOpts(){
 
 function narrowAutoScrollNav(){
   if(!isMobile()) return;
-  const cont = document.getElementById('nav-rows-col');
+  const cont = document.getElementById('sc-grid');
   if(!cont) return;
-  const active = cont.querySelector('.hcard.active');
+  const active = cont.querySelector('.sg-active');
   if(active) setTimeout(() => active.scrollIntoView({inline:'center', behavior:'smooth'}), 60);
 }
 

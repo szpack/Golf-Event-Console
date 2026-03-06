@@ -117,6 +117,54 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v9.6.4 — 2026-03-06
+- 计分卡导航区 TOT 列始终显示 Gross 总杆数（不受 displayMode 影响）
+- PAR 行底色与 HOLE 行一致（深色背景），文字半透明区分层次
+
+### v9.6.3 — 2026-03-06
+- 计分卡导航区成绩显示跟随 Settings 中 To Par / Gross 设定，包括每洞、OUT/IN 小计和 TOT 总计
+
+### v9.6.2 — 2026-03-06
+- Fix: 计分卡 Canvas 覆盖层成绩显示范围修正为 1~N（含当前洞），之前 scoreEnd 用的是 currentHole 而非 currentHole+1
+
+### v9.6.1 — 2026-03-06
+- 计分卡 Total badge 始终显示第1洞到当前洞（含）的累计成绩，不再区分 in-play/result 模式
+
+### v9.6.0 — 2026-03-06
+- Apple Design 风格全局字体系统重构
+- 建立 6 级字号阶梯（9/10/11/13/22/36px），统一 4 级字重（400/500/600/700）
+- 启用 -webkit-font-smoothing: antialiased 亚像素渲染
+- 大写标签统一 letter-spacing（.08–.12em），提升呼吸感
+- HOLE label 改为轻量 300 字重，与粗体洞号形成层次对比
+- 全局圆角统一为 6/8px，间距微调更均匀
+- 去除冗余 font-weight: 800/900，按钮/标签风格更克制
+
+### v9.5.4 — 2026-03-06
+- 右侧球员区当前选中球员整行绿色色块高亮，一眼识别当前操作球员
+
+### v9.5.3 — 2026-03-06
+- **Bug Fix**: 修复关闭浏览器后当前球员成绩丢失的问题（doSave 前未同步 S.holes→byPlayer）
+
+### v9.5.2 — 2026-03-06
+- PGA 计分卡列 hover 高亮：鼠标悬停时整列背景变亮
+- 当前洞整列高亮（header/par/成绩行统一 sg-col-active 背景）
+- 点击球员成绩格同时切换球员和球洞，右侧面板联动更新
+
+### v9.5.1 — 2026-03-06
+- PGA 计分卡名字列加宽（60→80px），球员名字缩小不突兀
+- 成绩装饰统一单色（去掉彩色），+3及以上用三层方框表示
+
+### v9.5.0 — 2026-03-06
+- PGA TOUR 风格计分卡导航表格：HOLE/PAR/球员成绩网格布局
+- PGA 成绩装饰：Eagle 双圈、Birdie 圆圈、Bogey 方框、Double 双框、Triple+ 填充
+- 点击洞号切换当前洞，点击球员名称切换当前球员
+- 当前洞列高亮、当前球员行高亮
+- OUT/IN/TOT 小计列，点击可切换计分卡汇总视图
+- 移动端窄屏适配 PGA 网格压缩布局
+
+### v9.4.3 — 2026-03-06
+- Scorecard 默认勾选显示（showScore 初始值改为 true）
+
 ### v9.4.2 — 2026-03-06
 - Fix: 添加缺失的 expModeLabel() 函数，修复 18 SC ZIP 导出报错
 

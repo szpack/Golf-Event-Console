@@ -93,9 +93,8 @@ function drawScorecardOverlay(ctx,X,Y,scale){
   const th=getTheme().sc;
   const[start,end]=getSCRange(), count=end-start;
   if(count<=0) return;
-  // In hole view: only fill scores for holes before currentHole; hide on hole 1
-  const scoreEnd = S.scorecardSummary===null ? S.currentHole : end;
-  if(S.scorecardSummary===null && scoreEnd===0) return;
+  // In hole view: fill scores for holes 1..currentHole (inclusive)
+  const scoreEnd = S.scorecardSummary===null ? S.currentHole+1 : end;
   const is18=count===18;
   // v5.3: columns — for 18H: label | 1-9 | OUT | 10-18 | IN | TOT
   const COL=54, LAB=Math.round(COL*1.3), TOT=Math.round(COL*1.5);
