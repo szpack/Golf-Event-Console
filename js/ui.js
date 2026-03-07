@@ -528,30 +528,56 @@ function buildShotButtons(){
   const noScore=(h.delta===null);
   const overviewMode=si<0;
   const ri=getReadyIndex();
-  const count=noScore?h.par:Math.max(gross, h.par);
-  for(let i=0;i<count;i++){
+  // Always show par*2+1 slots
+  const totalSlots=h.par*2+1;
+  for(let i=0;i<totalSlots;i++){
     const btn=document.createElement('button');
     if(noScore){
-      btn.className='snum-btn unused';
+      // No score set: all slots inactive
+      const isPlayed=false;
+      btn.className='snum-btn'+(i<h.par?' unused':' unused');
       btn.disabled=true;
     } else {
-      const isUnused=i>=gross;
-      const isCur=!overviewMode&&!isUnused&&i===si;
-      const isReady=!overviewMode&&!isUnused&&ri>=0&&i===ri;
-      const isPast=!overviewMode&&!isUnused&&i<si;
-      let cls='snum-btn ';
-      if(isUnused) cls+='unused';
-      else if(isCur) cls+='cur';
-      else if(isReady) cls+='ready';
-      else if(overviewMode) cls+='past';
-      else if(isPast) cls+='past';
-      else cls+='future';
+      const isPlayed=i<gross; // within completed strokes
+      const isCur=!overviewMode&&isPlayed&&i===si;
+      const isReady=!overviewMode&&isPlayed&&ri>=0&&i===ri;
+      const isPast=!overviewMode&&isPlayed&&i<si;
+      let cls='snum-btn';
+      if(!isPlayed){
+        cls+=' unused';
+      } else if(isCur){
+        cls+=' cur';
+      } else if(isReady){
+        cls+=' ready';
+      } else if(overviewMode){
+        // All played shots get colored bg
+        cls+=' played';
+      } else if(isPast){
+        cls+=' played';
+      } else {
+        cls+=' future';
+      }
       btn.className=cls;
-      if(!isUnused) btn.onclick=(()=>{ const idx=i; return ()=>{ clearReady(); curHole().shotIndex=idx; render(); scheduleSave(); focusToPin(); }; })();
-      else btn.disabled=true;
+      if(isPlayed){
+        // Color the played buttons with delta color
+        if((overviewMode||i<si||i===si)&&cls.indexOf('played')>=0){
+          btn.style.background=deltaColorHex(h.delta);
+          btn.style.color='#fff';
+          btn.style.borderColor='transparent';
+        }
+        btn.onclick=(()=>{ const idx=i; return ()=>{ clearReady(); curHole().shotIndex=idx; render(); scheduleSave(); focusToPin(); }; })();
+      } else {
+        btn.disabled=true;
+      }
     }
     btn.textContent=String(i+1);
     cont.appendChild(btn);
+  }
+  // Auto-scroll to show current shot
+  if(!noScore&&gross>0){
+    const scrollTarget=overviewMode?gross-1:si;
+    const targetBtn=cont.children[scrollTarget];
+    if(targetBtn) setTimeout(()=>targetBtn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'}),50);
   }
 }
 
@@ -598,30 +624,22 @@ function buildFocusPlayerBtns(){
   });
 }
 
-// ── SCORE QUICK BUTTONS (delta) ──
-const SCORE_OPTIONS=[
-  {delta:-1,key:'birdie'},
-  {delta:0, key:'par'},
-  {delta:1, key:'bogey'},
-  {delta:2, key:'double'},
-  {delta:3, key:'triple'},
-];
-function buildScoreBtns(){
-  const cont=document.getElementById('rp-score-btns');
-  if(!cont) return;
-  cont.innerHTML='';
+// ── SCORE VALUE DISPLAY ──
+function buildScoreVal(){
+  const el=document.getElementById('rp-score-val');
+  if(!el) return;
   const h=curHole();
-  SCORE_OPTIONS.forEach(({delta,key})=>{
-    const btn=document.createElement('button');
-    btn.className='rp-score-btn';
-    if(h.delta===delta){
-      btn.classList.add('active');
-      btn.style.background=deltaColorHex(delta);
-    }
-    btn.textContent=T(key);
-    btn.onclick=()=>setDelta(delta);
-    cont.appendChild(btn);
-  });
+  if(h.delta===null){
+    el.textContent='\u2014';
+    el.style.background='';
+    el.style.color='';
+    el.style.borderColor='';
+  } else {
+    el.textContent=deltaLabel(h.delta);
+    el.style.background=deltaColorHex(h.delta);
+    el.style.color='#fff';
+    el.style.borderColor='transparent';
+  }
 }
 
 // ── TO PAR ROW ──
@@ -631,17 +649,11 @@ function buildToParRow(){
   cont.innerHTML='';
   const h=curHole(), gross=getGross(h), si=h.shotIndex;
   const noScore=(h.delta===null);
-  const count=noScore?h.par:Math.max(gross, h.par);
-  // Compute cumulative to-par per shot
-  // Simple model: each shot adds 1 stroke; par is spread evenly
-  for(let i=0;i<count;i++){
+  const totalSlots=h.par*2+1;
+  for(let i=0;i<totalSlots;i++){
     const cell=document.createElement('div');
     cell.className='topar-cell';
     if(!noScore && i<gross){
-      // cumulative strokes = i+1, expected par strokes at this point
-      // Use simple model: to-par at shot i = (i+1) - par + delta_at_end * (i+1)/gross
-      // Simpler: show running delta = (strokes so far) - (expected par progress)
-      // Most useful: show overall to-par progression
       const strokesSoFar=i+1;
       const expectedPar=h.par*(strokesSoFar/gross);
       const runningDelta=Math.round(strokesSoFar-expectedPar);
@@ -652,22 +664,14 @@ function buildToParRow(){
   }
 }
 
-// ── SCORE SUMMARY ──
-function buildScoreSummary(){
-  const el=document.getElementById('rp-score-summary');
-  if(!el) return;
-  const h=curHole(), gross=getGross(h);
-  if(h.delta===null){ el.textContent=''; return; }
-  const label=deltaLabel(h.delta);
-  el.textContent=gross+' ('+fmtDeltaDisplay(h.delta)+') '+label;
-}
-
 // ── RIGHT PANEL REFRESH ──
 function updateRightPanel(){
   const h=curHole(), idx=S.currentHole, gross=getGross(h);
-  // Course name
-  const courseEl=document.getElementById('rp-course-name');
-  if(courseEl) courseEl.textContent=S.courseName||'';
+  // Course name (top + bottom nav)
+  const courseTop=document.getElementById('rp-course-name-top');
+  if(courseTop) courseTop.textContent=S.courseName||'';
+  const courseBot=document.getElementById('rp-course-name');
+  if(courseBot) courseBot.textContent=S.courseName||'';
   // HOLE + Par
   const holeLbl=document.getElementById('rp-hole-lbl');
   const holeNum=document.getElementById('rp-hole-num');
@@ -677,18 +681,24 @@ function updateRightPanel(){
   if(parVal) parVal.textContent=String(h.par);
   // Players
   buildFocusPlayerBtns();
-  // Score summary
-  buildScoreSummary();
-  // Score buttons
-  buildScoreBtns();
+  // Score value
+  buildScoreVal();
   // Shot progress + nav + to-par
   buildShotButtons();
   buildToParRow();
-  // To Pin
+  // To Pin: overview mode → hole length; otherwise → shot to pin
   const overviewMode=h.shotIndex<0;
-  const shotToPin=overviewMode?null:getShotToPin(h,h.shotIndex);
   const distInput=document.getElementById('inp-dist');
-  if(distInput){ distInput.value=shotToPin!==null?shotToPin:''; distInput.placeholder='—'; }
+  if(distInput){
+    if(overviewMode){
+      const holeLen=h.holeLengthYds;
+      distInput.value=holeLen!==null&&holeLen!==undefined?holeLen:'';
+    } else {
+      const shotToPin=getShotToPin(h,h.shotIndex);
+      distInput.value=shotToPin!==null?shotToPin:'';
+    }
+    distInput.placeholder='—';
+  }
   // Type buttons
   buildTypeButtons();
   // Course display

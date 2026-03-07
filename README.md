@@ -117,6 +117,16 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v10.17.1 — 2026-03-07
+- 恢复 Course 区到 Players 上方
+- To Pin 在未选中具体杆时（overview 模式）输入写入球洞距离 (holeLengthYds)
+
+### v10.17.0 — 2026-03-07
+- Score区改为单行：左侧 Score 标签 + 右侧成绩值（点击打开成绩滚轮）
+- 击球进度条改为固定 par×2+1 个数字，已完成杆用 delta 颜色填充，超出可滚动
+- 取消进度条左右箭头，直接点击数字选择杆
+- Result 缩写 LIGHT ROUGH → L.ROUGH, HEAVY ROUGH → H.ROUGH
+
 ### v10.16.0 — 2026-03-07
 - 重构右侧 Hole/Shot 控制区 UI 布局
 - Hole 信息区：HOLE N 独立行 + PAR | TO PIN 第二行

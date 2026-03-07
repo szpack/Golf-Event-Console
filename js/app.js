@@ -73,7 +73,7 @@ const STRINGS = {
     // UI labels
     courseLbl:'Course', playersLbl:'Players', scoreLbl:'Score', shotLbl:'SHOT',
     shotTypeLbl:'SHOT TYPE', purposeLbl:'PURPOSE', resultLbl:'RESULT', flagsLbl:'FLAGS', noteLbl:'NOTE',
-    landGreen:'ON GREEN', landFairway:'FAIRWAY', landBunker:'BUNKER', landLight:'LIGHT ROUGH', landHeavy:'HEAVY ROUGH', landWater:'WATER', landTrees:'TREES',
+    landGreen:'ON GREEN', landFairway:'FAIRWAY', landBunker:'BUNKER', landLight:'L.ROUGH', landHeavy:'H.ROUGH', landWater:'WATER', landTrees:'TREES',
     editBtn:'EDIT', prevBtn:'PREV', nextBtn:'NEXT', exportBtn2:'Export…',
     singleLbl:'Single', batchLbl:'Batch', allLbl:'All',
     expShotPng:'Shot PNG', expScPng:'Scorecard PNG',
@@ -265,7 +265,7 @@ const STRINGS = {
     // UI labels
     courseLbl:'コース', playersLbl:'プレーヤー', scoreLbl:'スコア', shotLbl:'ショット',
     shotTypeLbl:'ショットタイプ', purposeLbl:'目的', resultLbl:'結果', flagsLbl:'フラグ', noteLbl:'メモ',
-    landGreen:'グリーンオン', landFairway:'フェアウェイ', landBunker:'バンカー', landLight:'ライトラフ', landHeavy:'ヘビーラフ', landWater:'ウォーター', landTrees:'林',
+    landGreen:'グリーンオン', landFairway:'フェアウェイ', landBunker:'バンカー', landLight:'L.ラフ', landHeavy:'H.ラフ', landWater:'ウォーター', landTrees:'林',
     editBtn:'編集', prevBtn:'前へ', nextBtn:'次へ', exportBtn2:'エクスポート…',
     singleLbl:'単体', batchLbl:'バッチ', allLbl:'全て',
     expShotPng:'ショット PNG', expScPng:'スコアカード PNG',
@@ -358,7 +358,7 @@ const STRINGS = {
     // UI labels
     courseLbl:'코스', playersLbl:'플레이어', scoreLbl:'스코어', shotLbl:'샷',
     shotTypeLbl:'샷 타입', purposeLbl:'목적', resultLbl:'결과', flagsLbl:'플래그', noteLbl:'메모',
-    landGreen:'온 그린', landFairway:'페어웨이', landBunker:'벙커', landLight:'라이트 러프', landHeavy:'헤비 러프', landWater:'워터', landTrees:'숲',
+    landGreen:'온 그린', landFairway:'페어웨이', landBunker:'벙커', landLight:'L.러프', landHeavy:'H.러프', landWater:'워터', landTrees:'숲',
     editBtn:'편집', prevBtn:'이전', nextBtn:'다음', exportBtn2:'내보내기…',
     singleLbl:'단일', batchLbl:'배치', allLbl:'전체',
     expShotPng:'샷 PNG', expScPng:'스코어카드 PNG',
@@ -451,7 +451,7 @@ const STRINGS = {
     // UI labels
     courseLbl:'Campo', playersLbl:'Jugadores', scoreLbl:'Puntuación', shotLbl:'GOLPE',
     shotTypeLbl:'TIPO DE GOLPE', purposeLbl:'PROPÓSITO', resultLbl:'RESULTADO', flagsLbl:'BANDERAS', noteLbl:'NOTA',
-    landGreen:'EN GREEN', landFairway:'FAIRWAY', landBunker:'BÚNKER', landLight:'ROUGH LEVE', landHeavy:'ROUGH DENSO', landWater:'AGUA', landTrees:'ÁRBOLES',
+    landGreen:'EN GREEN', landFairway:'FAIRWAY', landBunker:'BÚNKER', landLight:'L.ROUGH', landHeavy:'H.ROUGH', landWater:'AGUA', landTrees:'ÁRBOLES',
     editBtn:'EDITAR', prevBtn:'ANT', nextBtn:'SIG', exportBtn2:'Exportar…',
     singleLbl:'Individual', batchLbl:'Lote', allLbl:'Todo',
     expShotPng:'Golpe PNG', expScPng:'Tarjeta PNG',
@@ -601,9 +601,10 @@ function applyLang(){
   const pSecLbl=g('player-section-lbl'); if(pSecLbl) pSecLbl.textContent=T('playersLbl');
   const showPNLbl=g('sd-show-pname-lbl'); if(showPNLbl) showPNLbl.textContent=T('showPlayerName');
   // Right panel section labels
+  const rpCourseLbl=g('rp-course-lbl'); if(rpCourseLbl) rpCourseLbl.textContent=T('courseLbl');
+  const rpCourseEdit=g('btn-course-edit'); if(rpCourseEdit) rpCourseEdit.textContent=T('editBtn');
   const rpPlayersLbl=g('rp-players-lbl'); if(rpPlayersLbl) rpPlayersLbl.textContent=T('playersLbl');
   const rpScoreLbl=g('rp-score-lbl'); if(rpScoreLbl) rpScoreLbl.textContent=T('scoreLbl');
-  const btnScoreMore=g('btn-score-more'); if(btnScoreMore) btnScoreMore.textContent=T('editBtn');
   const rpToPinLbl=g('rp-topin-lbl'); if(rpToPinLbl) rpToPinLbl.textContent=T('toPinLabel');
   const distUnit=g('dist-unit'); if(distUnit) distUnit.textContent=T('ydsLabel');
   const spTypeLbl=g('sp-type-lbl'); if(spTypeLbl) spTypeLbl.textContent=T('shotTypeLbl');
@@ -1138,8 +1139,8 @@ function getShotToPin(h,idx){
 }
 function setShotToPin(val){
   const h=curHole();
-  if(h.shotIndex===0){
-    // TEE Off: update shared hole length only (all players share this distance)
+  if(h.shotIndex<0||h.shotIndex===0){
+    // Overview mode or TEE Off: update shared hole length
     h.holeLengthYds=val;
   } else {
     if(!h.toPins) h.toPins={};

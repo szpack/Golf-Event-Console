@@ -194,10 +194,14 @@ html.light #rp-par-tap:hover{background:rgba(138,114,0,.08)}
 .rp-hole-sep{color:var(--t3);font-size:12px;margin:0 2px}
 #rp-topin-lbl{font:600 11px/1 'Roboto',Arial,sans-serif;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
 
-/* ── Score summary ── */
-#rp-score-summary{font:600 12px/1 'Roboto',Arial,sans-serif;color:var(--text-primary);margin-left:8px;flex:1}
+/* ── Score value (clickable) ── */
+#rp-score-val{font:600 13px/1 'Roboto',Arial,sans-serif;color:var(--text-primary);cursor:pointer;margin-left:auto;padding:3px 10px;border-radius:5px;border:1px solid var(--panel-border);transition:background 80ms}
+#rp-score-val:hover{background:rgba(255,255,255,.06)}
+.rp-score-row{margin-bottom:8px!important}
+#rp-course-name-top{flex:1;font:500 15px/1.2 'Roboto',Arial,sans-serif;color:var(--text-primary);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:18px}
+#rp-course-name-top:empty::after{content:'(tap to set)';color:var(--t3);font-style:italic;font-weight:400;font-size:13px}
 #rp-course-name{font:500 11px/1.2 'Roboto',Arial,sans-serif;color:var(--text-muted);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:center;padding:0 6px}
-#rp-course-name:empty::after{content:'(course)';color:var(--t3);font-style:italic;font-weight:400;font-size:10px}
+#rp-course-name:empty::after{content:'';}
 
 /* ── Hole Navigation (bottom) ── */
 #rp-hole-nav{display:flex;align-items:center;gap:8px;margin-top:20px;padding-top:12px;border-top:1px solid var(--panel-border)}
@@ -247,13 +251,15 @@ html.light .rp-plyr-btn.active{background:#FFD700;color:#1a2e1a;border-color:#d4
 .rp-sec.rp-sec-no-border{border-bottom:none}
 
 /* ── Shot progress bar ── */
-#rp-shot-progress{display:flex;align-items:center;gap:4px;min-height:28px}
+#rp-shot-progress{display:flex;align-items:center;min-height:28px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#rp-shot-progress::-webkit-scrollbar{display:none}
+#shot-btns{display:flex;gap:3px;flex-wrap:nowrap}
 
 /* ── TO PAR row ── */
-#rp-topar-row{display:flex;align-items:center;gap:4px;margin-top:3px;min-height:18px}
-.topar-arrow-spacer{width:36px;flex-shrink:0}
-#topar-cells{flex:1;display:flex;gap:5px;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
-.topar-cell{flex:0 0 auto;width:26px;height:18px;display:flex;align-items:center;justify-content:center;font:600 9px/1 'Roboto',Arial,sans-serif;color:var(--text-muted);border-radius:3px}
+#rp-topar-row{display:flex;align-items:center;margin-top:2px;min-height:16px;overflow-x:auto;scrollbar-width:none}
+#rp-topar-row::-webkit-scrollbar{display:none}
+#topar-cells{display:flex;gap:3px;flex-wrap:nowrap}
+.topar-cell{flex:0 0 auto;width:26px;height:16px;display:flex;align-items:center;justify-content:center;font:600 9px/1 'Roboto',Arial,sans-serif;color:var(--text-muted);border-radius:3px}
 .topar-cell.tp-active{color:var(--text-primary);font-weight:700}
 
 /* ── Dist unit ── */
@@ -339,10 +345,11 @@ html.light .player-row.pr-active{background:rgba(34,197,94,.08)}
 .shot-nav-btn{width:30px;flex-shrink:0;height:26px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:500 11px/1 'Roboto',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 80ms ease-out,color 80ms ease-out}
 .shot-nav-btn:active{background:rgba(255,255,255,.07)}
 /* shot number buttons */
-#shot-btns{flex:1;display:flex;gap:5px;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto}
+/* (shot-btns layout moved to #rp-shot-progress block) */
 .snum-btn{flex:0 0 auto;width:26px;height:26px;border-radius:6px;border:1px solid var(--panel-border);background:transparent;color:var(--text-muted);font:700 12px/1 'Roboto',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 80ms ease-out,color 80ms ease-out,border-color 80ms ease-out}
 .snum-btn.cur{background:#FFD700;color:#1a1a1a;border-color:#FFD700;font-weight:700}
 .snum-btn.ready{background:transparent;color:#FFD700;border:2px solid #FFD700;font-weight:700}
+.snum-btn.played{border-color:transparent}
 .snum-btn.past{background:rgba(255,255,255,.18);color:var(--t1);border-color:transparent}
 .snum-btn.future{background:rgba(255,255,255,.05);color:var(--t3);border-color:transparent}
 .snum-btn.unused{background:transparent;color:var(--t3);border:1px dashed var(--panel-border);opacity:.45;cursor:default}
