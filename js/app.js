@@ -888,9 +888,10 @@ function loadSaved(){
     S=Object.assign(defState(),saved);
     if(!S.overlayPos||typeof S.overlayPos['16:9']!=='object') S.overlayPos=defState().overlayPos;
     if(!S.scorecardPos||typeof S.scorecardPos['16:9']!=='object') S.scorecardPos=defState().scorecardPos;
-    // Ensure centered flag exists
+    // Ensure centered flag exists; clamp Y to prevent off-screen scorecard
     ['16:9','9:16','1:1'].forEach(r=>{
       if(S.scorecardPos[r]===undefined) S.scorecardPos[r]=defState().scorecardPos[r];
+      else if(S.scorecardPos[r].y>0.92) S.scorecardPos[r].y=0.82;
     });
     S.holes=Array.from({length:18},(_,i)=>Object.assign(
       {par:4,holeLengthYds:null,delta:null,shots:[],shotIndex:0,manualTypes:{},toPins:{}},
@@ -1976,8 +1977,8 @@ function snapPos(px,py,ow,oh){
   if(Math.abs(px+ow-cvCssW)<6) px=cvCssW-ow;
   if(Math.abs(py)<6) py=0;
   if(Math.abs(py+oh-cvCssH)<6) py=cvCssH-oh;
-  // Allow free drag — only clamp to keep at least 10px visible
-  return{x:Math.max(-ow+10,Math.min(cvCssW-10,px)),y:Math.max(-oh+10,Math.min(cvCssH-10,py))};
+  // Clamp: keep at least 40% of overlay height visible vertically, 10px horizontally
+  return{x:Math.max(-ow+10,Math.min(cvCssW-10,px)),y:Math.max(-oh+10,Math.min(cvCssH-oh*0.4,py))};
 }
 
 // v4.5: center-snap for scorecard
@@ -2132,16 +2133,9 @@ function drawOverlays(ctx,w,h,forExport){
     const pos=S.overlayPos[S.ratio];
     drawShotOverlay(ctx,pos.x*w,pos.y*h,shotScale);
   }
-  // DEBUG: trace scorecard rendering
-  if(!drawOverlays._logged){
-    const scPos=S.scorecardPos[S.ratio];
-    console.log('[SC DEBUG] showScore:',S.showScore,'pos:',JSON.stringify(scPos),'canvas:',w+'x'+h,'scale:',baseScale.toFixed(4));
-    drawOverlays._logged=true;
-    setTimeout(()=>{ drawOverlays._logged=false; },3000);
-  }
   if(S.showScore){
     const scScale=baseScale*(is916?1.35:1);
-    const scW=getSCWidth(scScale);
+    const scW=getSCWidth(scScale), scH=getSCHeight(scScale);
     let scX;
     const pos=S.scorecardPos[S.ratio];
     if(pos.centered){
@@ -2151,7 +2145,9 @@ function drawOverlays(ctx,w,h,forExport){
     } else {
       scX=pos.x*w-scW/2;
     }
-    drawScorecardOverlay(ctx,scX,pos.y*h,scScale);
+    // Clamp Y so scorecard stays visible (at least 60% of height within canvas)
+    const scY=Math.min(pos.y*h, h-scH*0.6);
+    drawScorecardOverlay(ctx,scX,scY,scScale);
   }
 }
 
@@ -2406,7 +2402,9 @@ function expMakeSCCanvas(w,h){
   const is916=S.ratio==='9:16';
   const scale=(w/1920)*(is916?1.35:1), scW=getSCWidth(scale), pos=S.scorecardPos[S.ratio];
   let scX; if(pos.centered)scX=(w-scW)/2; else if(pos.absX!==undefined)scX=pos.absX*w; else scX=pos.x*w-scW/2;
-  drawScorecardOverlay(ctx,scX,pos.y*h,scale);
+  const scH=getSCHeight(scale);
+  const scY=Math.min(pos.y*h, h-scH*0.6);
+  drawScorecardOverlay(ctx,scX,scY,scale);
   return c;
 }
 
@@ -2915,8 +2913,9 @@ function mobPvTouchMove(e){
     const is916 = S.ratio==='9:16';
     const scScale = scale * (is916?1.35:1);
     const sw = getSCWidth(scScale);
+    const sh = getSCHeight(scScale);
     const nx = Math.max(0, Math.min(cw-1, mobPvDragStart.ox + dx));
-    const ny = Math.max(0, Math.min(ch-1, mobPvDragStart.oy + dy));
+    const ny = Math.max(0, Math.min(ch-sh*0.4, mobPvDragStart.oy + dy));
     const centerX = (cw - sw) / 2;
     const centered = Math.abs(nx - centerX) < 12;
     S.scorecardPos[S.ratio] = {x:(nx+sw/2)/cw, y:ny/ch, centered, absX:nx/cw};
@@ -3203,11 +3202,6 @@ function init(){
   if(typeof S.currentHole!=='number'||S.currentHole<0||S.currentHole>17) S.currentHole=0;
 
   if(typeof buildPlayerArea==='function') buildPlayerArea();
-
-  // ── DIAGNOSTIC: trace scorecard state on load ──
-  const _scDiag=`SC:${S.showScore} Shot:${S.showShot} y:${S.scorecardPos[S.ratio]?.y}`;
-  console.warn('[SC DIAG]',_scDiag,'full:',JSON.stringify(S.scorecardPos[S.ratio]));
-  setTimeout(()=>miniToast(_scDiag),1500);
 
   // Defer first render to ensure layout is settled — prevents position jumping
   requestAnimationFrame(()=>{ render(); requestAnimationFrame(render); });

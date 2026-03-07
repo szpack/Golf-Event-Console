@@ -117,6 +117,11 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v10.21.2 — 2026-03-07
+- 修复计分卡被拖出画布底部后不可见的问题：drawOverlays/导出/移动端均添加Y轴钳位
+- snapPos限制拖拽范围，保证至少40%高度在画布内
+- loadSaved自动修正历史保存中y>0.92的异常位置
+
 ### v10.21.1 — 2026-03-07
 - 添加计分卡渲染诊断：页面加载时toast显示showScore状态和位置，drawOverlays输出console日志
 
