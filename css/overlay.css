@@ -258,7 +258,7 @@ html.light .rp-plyr-btn.active{background:#FFD700;color:#1a2e1a;border-color:#d4
 #rp-shot-progress{display:flex;align-items:center;height:32px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 #rp-shot-progress::-webkit-scrollbar{display:none}
 #shot-btns{display:flex;gap:3px;flex-wrap:nowrap;position:relative;height:30px;align-items:center}
-.shot-color-bar{position:absolute;top:50%;transform:translateY(-50%);left:0;height:30px;border-radius:8px;z-index:0;pointer-events:none}
+.shot-color-bar{position:absolute;top:50%;transform:translateY(-50%);left:0;height:30px;border-radius:0;z-index:0;pointer-events:none}
 
 /* ── TO PAR row ── */
 #rp-topar-row{display:flex;align-items:center;margin-top:2px;min-height:16px;overflow-x:auto;scrollbar-width:none}

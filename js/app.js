@@ -1234,7 +1234,7 @@ const THEMES = {
       sqPastTextColor:    'rgba(255,255,255,.85)',
       sqFutureBg:         'rgba(255,255,255,.10)',
       sqFutureTextColor:  'rgba(255,255,255,.3)',
-      sqRadius:           3,
+      sqRadius:           0,
       sqNumWeight:        700,
       sqNumSize:          15,
       // Dividers
@@ -1375,7 +1375,7 @@ THEMES.broadcast_gold = {
     sqPastTextColor:    'rgba(255,255,255,0.90)',
     sqFutureBg:         'rgba(255,255,255,0.25)',
     sqFutureTextColor:  'rgba(255,255,255,0.40)',
-    sqRadius:           8,
+    sqRadius:           0,
     sqNumWeight:        700,
     sqNumSize:          15,
     // Dividers
@@ -1505,7 +1505,7 @@ THEMES.pgatour = {
     sqPastTextColor:    'rgba(255,255,255,0.90)',
     sqFutureBg:         'rgba(255,255,255,0.25)',
     sqFutureTextColor:  'rgba(255,255,255,0.40)',
-    sqRadius:           7,
+    sqRadius:           0,
     sqNumWeight:        700,
     sqNumSize:          15,
     // Dividers — red accent divider
@@ -1632,7 +1632,7 @@ THEMES.livgolf = {
     sqPastTextColor:    'rgba(255,255,255,0.90)',
     sqFutureBg:         'rgba(255,255,255,0.18)',
     sqFutureTextColor:  'rgba(255,255,255,0.35)',
-    sqRadius:           8,
+    sqRadius:           0,
     sqNumWeight:        700,
     sqNumSize:          15,
     // Dividers — neon green

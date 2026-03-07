@@ -117,6 +117,9 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v10.18.8 — 2026-03-07
+- 击球进度条成绩着色改为直角矩形色块（CSS色条+Canvas所有主题sqRadius均置0）
+
 ### v10.18.7 — 2026-03-07
 - 切换洞或录入新成绩后，进度条不选中任何杆（shotIndex=-1），击球信息版显示本洞成绩
 - 微信小程序同步
