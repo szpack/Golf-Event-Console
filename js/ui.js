@@ -276,7 +276,6 @@ function buildHoleNav(){
       S.scorecardSummary=null;
       resetAllShotIndex(i);
       render(); scheduleSave();
-      openScoreDrawer(i);
     };
   }
 

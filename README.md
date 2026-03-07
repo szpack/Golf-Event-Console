@@ -117,6 +117,13 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v10.13.5 — 2026-03-07
+- 计分卡导航区点击PAR/HOLE只切换洞号，不再弹出成绩编辑器
+- Score区"…"改为"编辑"按钮（多语言），点击打开成绩编辑器
+
+### v10.13.4 — 2026-03-07
+- 点击Shot Type/Result/Flag按钮后自动跳到下一杆，支持快速连续编辑
+
 ### v10.13.3 — 2026-03-07
 - 手动设置Shot Type后，自动推断的Result（如FOR PAR）不再高亮，Canvas也优先显示手动Shot Type
 

@@ -596,6 +596,7 @@ function applyLang(){
   const rpPlayersLbl=g('rp-players-lbl'); if(rpPlayersLbl) rpPlayersLbl.textContent=T('playersLbl');
   const rpShotLbl=g('rp-shot-lbl'); if(rpShotLbl) rpShotLbl.textContent=T('shotLbl');
   const rpScoreLbl=g('rp-score-lbl'); if(rpScoreLbl) rpScoreLbl.textContent=T('scoreLbl');
+  const btnScoreMore=g('btn-score-more'); if(btnScoreMore) btnScoreMore.textContent=T('editBtn');
   const spTypeLbl=g('sp-type-lbl'); if(spTypeLbl) spTypeLbl.textContent=T('shotTypeLbl');
   const spResultLbl=g('sp-result-lbl'); if(spResultLbl) spResultLbl.textContent=T('resultLbl');
   const spFlagLbl=g('sp-flag-lbl'); if(spFlagLbl) spFlagLbl.textContent=T('flagsLbl');
@@ -1069,6 +1070,12 @@ function setShotType(type){
   const newEff=getEffectiveShot(h,h.shotIndex);
   s.type=newEff.shotType;
   h.manualTypes[h.shotIndex]=!!s.manualShotType;
+
+  // Auto-advance to next shot for quick sequential editing
+  const gross=getGross(h);
+  if(gross && h.shotIndex < gross-1){
+    h.shotIndex++;
+  }
 
   render(); scheduleSave();
 }
