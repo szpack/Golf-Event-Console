@@ -24,7 +24,7 @@ const STRINGS = {
     everyShot:'EVERY SHOT',
     shotSection:'SHOT', optionsTitle:'DISPLAY OPTIONS',
     shotOverlay:'Shot Overlay', scorecardOverlay:'Scorecard',
-    front9:'Front 9', back9:'Back 9', h18:'18 Holes',
+    front9:'F9', back9:'B9', h18:'18H',
     topar:'To Par', gross:'Gross',
     sdTitle:'⚙️ Settings', sdBg:'Background Image', sdBgOp:'BG Opacity',
     sdClearBg:'🗑 Clear Background (restore default)',
@@ -65,6 +65,29 @@ const STRINGS = {
     toPinLabel:'TO PIN', ydsLabel:'YDS',
     albatross:'ALBATROSS', eagle:'EAGLE', birdie:'BIRDIE', par:'PAR',
     bogey:'BOGEY', double:'DOUBLE', triple:'TRIPLE+',
+    // UI labels
+    courseLbl:'Course', playersLbl:'Players', scoreLbl:'Score', shotLbl:'SHOT',
+    shotTypeLbl:'SHOT TYPE', resultLbl:'RESULT', flagsLbl:'FLAGS', noteLbl:'NOTE',
+    editBtn:'EDIT', prevBtn:'PREV', nextBtn:'NEXT', exportBtn2:'Export…',
+    singleLbl:'Single', batchLbl:'Batch', allLbl:'All',
+    expShotPng:'Shot PNG', expScPng:'Scorecard PNG',
+    expHoleZip:'Hole Shots ZIP', expScZip:'Scorecard ZIP', expAllZip:'Export All ZIP',
+    // Player manager
+    pmTitle:'Players', pmActive:'Active Players', pmAdd:'Add Player', pmHist:'History',
+    pmNamePh:'Name…', pmSearchPh:'Search…',
+    noPlayersYet:'No players yet', noHistory:'No history',
+    playerAdded:n=>n+' added',
+    // Messages
+    maxPlayers:'Max 150 players', playerExists:'Player exists',
+    courseNamePrompt:'Course name:',
+    scPosReset:'Scorecard position reset',
+    setScoreFirst:'Set score first', jsZipNotLoaded:'JSZip not loaded',
+    addPlayersFirst:'Add players first', exportError:'Export error',
+    holeCleared:'Hole cleared',
+    // New round
+    clearBtn:'Clear', cancelBtn:'Cancel', okBtn:'OK',
+    showPlayerName:'Show Player Name',
+    logoText:'⛳ GOLF <span>OVERLAY</span>',
   },
   zh:{
     holeHero:h=>`第 ${h} 洞`, holeLbl:'第·洞', parLabel:p=>`标准杆 ${p}`,
@@ -77,7 +100,7 @@ const STRINGS = {
     everyShot:'每一杆',
     shotSection:'击球', optionsTitle:'显示选项',
     shotOverlay:'Shot Overlay', scorecardOverlay:'计分卡',
-    front9:'前9洞', back9:'后9洞', h18:'全18洞',
+    front9:'前9', back9:'后9', h18:'18H',
     topar:'To Par', gross:'Gross',
     sdTitle:'⚙️ 设置', sdBg:'背景图', sdBgOp:'背景透明度',
     sdClearBg:'🗑 清除背景（恢复默认）',
@@ -94,7 +117,7 @@ const STRINGS = {
     bgBtn:'上传背景', opaLbl:'透明度',
     nextHoleShort:'下一洞',
     parLbl:'标准杆',
-    toeOff:'开球', approach:'攻果岭', layup:'过度', chip:'切杆', putt:'推杆',
+    toeOff:'开球', approach:'攻果岭', layup:'过渡', chip:'切杆', putt:'推杆',
     forBirdie:'抓鸟推', forPar:'保帕推', forBogey:'保柏忌推',
     forDouble:'保双推', forTriple:'保三+推',
     typeTee:'开球', typeAppr:'攻果岭', typeLayup:'过渡', typeChip:'切杆', typePutt:'推杆', typeProv:'暂定球',
@@ -116,6 +139,29 @@ const STRINGS = {
     toPinLabel:'距旗杆', ydsLabel:'码',
     albatross:'信天翁', eagle:'老鹰', birdie:'小鸟', par:'标准杆',
     bogey:'柏忌', double:'双柏忌', triple:'三柏忌+',
+    // UI labels
+    courseLbl:'球场', playersLbl:'球员', scoreLbl:'成绩', shotLbl:'击球',
+    shotTypeLbl:'击球类型', resultLbl:'结果', flagsLbl:'标记', noteLbl:'备注',
+    editBtn:'编辑', prevBtn:'上一洞', nextBtn:'下一洞', exportBtn2:'导出…',
+    singleLbl:'单张', batchLbl:'批量', allLbl:'全部',
+    expShotPng:'击球 PNG', expScPng:'计分卡 PNG',
+    expHoleZip:'当前洞击球包', expScZip:'18洞计分卡包', expAllZip:'全部导出 ZIP',
+    // Player manager
+    pmTitle:'球员管理', pmActive:'已添加球员', pmAdd:'添加球员', pmHist:'历史球员',
+    pmNamePh:'球员姓名…', pmSearchPh:'搜索球员…',
+    noPlayersYet:'暂无球员', noHistory:'无历史球员',
+    playerAdded:n=>n+' 已添加',
+    // Messages
+    maxPlayers:'最多150名球员', playerExists:'球员已存在',
+    courseNamePrompt:'球场名称：',
+    scPosReset:'计分卡位置已重置',
+    setScoreFirst:'请先录入成绩', jsZipNotLoaded:'JSZip 未加载',
+    addPlayersFirst:'请先添加球员', exportError:'导出错误',
+    holeCleared:'本洞已清空',
+    // New round
+    clearBtn:'清空', cancelBtn:'取消', okBtn:'确定',
+    showPlayerName:'显示球员名字',
+    logoText:'⛳ 高尔夫<span>角标助手</span>',
   },
   ja:{
     holeHero:h=>`ホール ${h}`, holeLbl:'HOLE', parLabel:p=>`パー ${p}`,
@@ -128,7 +174,7 @@ const STRINGS = {
     everyShot:'全ショット',
     shotSection:'ショット', optionsTitle:'表示オプション',
     shotOverlay:'Shot Overlay', scorecardOverlay:'スコアカード',
-    front9:'前半 9H', back9:'後半 9H', h18:'18ホール',
+    front9:'前半', back9:'後半', h18:'18H',
     topar:'To Par', gross:'Gross',
     sdTitle:'⚙️ 設定', sdBg:'背景画像', sdBgOp:'背景の不透明度',
     sdClearBg:'🗑 背景をクリア（デフォルトに戻す）',
@@ -167,6 +213,29 @@ const STRINGS = {
     toPinLabel:'ピンまで', ydsLabel:'ヤード',
     albatross:'アルバトロス', eagle:'イーグル', birdie:'バーディー', par:'パー',
     bogey:'ボギー', double:'ダブルボギー', triple:'トリプル+',
+    // UI labels
+    courseLbl:'コース', playersLbl:'プレーヤー', scoreLbl:'スコア', shotLbl:'ショット',
+    shotTypeLbl:'ショットタイプ', resultLbl:'結果', flagsLbl:'フラグ', noteLbl:'メモ',
+    editBtn:'編集', prevBtn:'前へ', nextBtn:'次へ', exportBtn2:'エクスポート…',
+    singleLbl:'単体', batchLbl:'バッチ', allLbl:'全て',
+    expShotPng:'ショット PNG', expScPng:'スコアカード PNG',
+    expHoleZip:'ホールショット ZIP', expScZip:'スコアカード ZIP', expAllZip:'全てエクスポート ZIP',
+    // Player manager
+    pmTitle:'プレーヤー管理', pmActive:'追加済み', pmAdd:'プレーヤー追加', pmHist:'履歴',
+    pmNamePh:'名前…', pmSearchPh:'検索…',
+    noPlayersYet:'プレーヤーなし', noHistory:'履歴なし',
+    playerAdded:n=>n+' 追加済み',
+    // Messages
+    maxPlayers:'最大150名', playerExists:'既に存在します',
+    courseNamePrompt:'コース名：',
+    scPosReset:'スコアカード位置リセット',
+    setScoreFirst:'先にスコアを設定', jsZipNotLoaded:'JSZip未読込',
+    addPlayersFirst:'先にプレーヤーを追加', exportError:'エクスポートエラー',
+    holeCleared:'ホールクリア',
+    // New round
+    clearBtn:'クリア', cancelBtn:'キャンセル', okBtn:'OK',
+    showPlayerName:'プレーヤー名表示',
+    logoText:'⛳ GOLF <span>OVERLAY</span>',
   },
   ko:{
     holeHero:h=>`${h}번 홀`, holeLbl:'HOLE', parLabel:p=>`파 ${p}`,
@@ -179,7 +248,7 @@ const STRINGS = {
     everyShot:'모든 샷',
     shotSection:'샷', optionsTitle:'표시 옵션',
     shotOverlay:'Shot Overlay', scorecardOverlay:'스코어카드',
-    front9:'전반 9홀', back9:'후반 9홀', h18:'18홀',
+    front9:'전반', back9:'후반', h18:'18H',
     topar:'To Par', gross:'Gross',
     sdTitle:'⚙️ 설정', sdBg:'배경 이미지', sdBgOp:'배경 투명도',
     sdClearBg:'🗑 배경 지우기（기본값으로 복원）',
@@ -218,6 +287,29 @@ const STRINGS = {
     toPinLabel:'핀까지', ydsLabel:'야드',
     albatross:'알바트로스', eagle:'이글', birdie:'버디', par:'파',
     bogey:'보기', double:'더블보기', triple:'트리플+',
+    // UI labels
+    courseLbl:'코스', playersLbl:'플레이어', scoreLbl:'스코어', shotLbl:'샷',
+    shotTypeLbl:'샷 타입', resultLbl:'결과', flagsLbl:'플래그', noteLbl:'메모',
+    editBtn:'편집', prevBtn:'이전', nextBtn:'다음', exportBtn2:'내보내기…',
+    singleLbl:'단일', batchLbl:'배치', allLbl:'전체',
+    expShotPng:'샷 PNG', expScPng:'스코어카드 PNG',
+    expHoleZip:'홀 샷 ZIP', expScZip:'스코어카드 ZIP', expAllZip:'전체 내보내기 ZIP',
+    // Player manager
+    pmTitle:'플레이어 관리', pmActive:'추가된 선수', pmAdd:'플레이어 추가', pmHist:'히스토리',
+    pmNamePh:'이름…', pmSearchPh:'검색…',
+    noPlayersYet:'플레이어 없음', noHistory:'히스토리 없음',
+    playerAdded:n=>n+' 추가됨',
+    // Messages
+    maxPlayers:'최대 150명', playerExists:'이미 존재합니다',
+    courseNamePrompt:'코스 이름:',
+    scPosReset:'스코어카드 위치 초기화',
+    setScoreFirst:'먼저 스코어를 설정하세요', jsZipNotLoaded:'JSZip 미로드',
+    addPlayersFirst:'먼저 플레이어를 추가하세요', exportError:'내보내기 오류',
+    holeCleared:'홀 초기화',
+    // New round
+    clearBtn:'지우기', cancelBtn:'취소', okBtn:'확인',
+    showPlayerName:'플레이어 이름 표시',
+    logoText:'⛳ GOLF <span>OVERLAY</span>',
   },
   es:{
     holeHero:h=>`HOYO ${h}`, holeLbl:'HOYO', parLabel:p=>`PAR ${p}`,
@@ -230,7 +322,7 @@ const STRINGS = {
     everyShot:'CADA GOLPE',
     shotSection:'GOLPE', optionsTitle:'OPCIONES DE PANTALLA',
     shotOverlay:'Shot Overlay', scorecardOverlay:'Tarjeta',
-    front9:'9 delant.', back9:'9 traseros', h18:'18 hoyos',
+    front9:'F9', back9:'B9', h18:'18H',
     topar:'A par', gross:'Brutos',
     sdTitle:'⚙️ Ajustes', sdBg:'Imagen de fondo', sdBgOp:'Opacidad del fondo',
     sdClearBg:'🗑 Borrar fondo (restaurar por defecto)',
@@ -269,6 +361,29 @@ const STRINGS = {
     toPinLabel:'AL HOYO', ydsLabel:'YDS',
     albatross:'ALBATROS', eagle:'ÁGUILA', birdie:'BIRDIE', par:'PAR',
     bogey:'BOGEY', double:'DOBLE', triple:'TRIPLE+',
+    // UI labels
+    courseLbl:'Campo', playersLbl:'Jugadores', scoreLbl:'Puntuación', shotLbl:'GOLPE',
+    shotTypeLbl:'TIPO DE GOLPE', resultLbl:'RESULTADO', flagsLbl:'BANDERAS', noteLbl:'NOTA',
+    editBtn:'EDITAR', prevBtn:'ANT', nextBtn:'SIG', exportBtn2:'Exportar…',
+    singleLbl:'Individual', batchLbl:'Lote', allLbl:'Todo',
+    expShotPng:'Golpe PNG', expScPng:'Tarjeta PNG',
+    expHoleZip:'Golpes del hoyo ZIP', expScZip:'Tarjeta ZIP', expAllZip:'Exportar todo ZIP',
+    // Player manager
+    pmTitle:'Jugadores', pmActive:'Jugadores activos', pmAdd:'Añadir jugador', pmHist:'Historial',
+    pmNamePh:'Nombre…', pmSearchPh:'Buscar…',
+    noPlayersYet:'Sin jugadores', noHistory:'Sin historial',
+    playerAdded:n=>n+' añadido',
+    // Messages
+    maxPlayers:'Máx. 150 jugadores', playerExists:'Jugador ya existe',
+    courseNamePrompt:'Nombre del campo:',
+    scPosReset:'Posición de tarjeta restablecida',
+    setScoreFirst:'Primero establezca el puntaje', jsZipNotLoaded:'JSZip no cargado',
+    addPlayersFirst:'Primero añada jugadores', exportError:'Error de exportación',
+    holeCleared:'Hoyo limpiado',
+    // New round
+    clearBtn:'Borrar', cancelBtn:'Cancelar', okBtn:'OK',
+    showPlayerName:'Mostrar nombre del jugador',
+    logoText:'⛳ GOLF <span>OVERLAY</span>',
   }
 };
 
@@ -319,7 +434,7 @@ document.addEventListener('click',e=>{
 function applyLang(){
   const g=id=>document.getElementById(id);
   const logoEl=document.getElementById('logo-text');
-  if(logoEl) logoEl.innerHTML=LANG==='zh'?'⛳ 高尔夫<span>角标助手</span>':'⛳ GOLF <span>OVERLAY</span>';
+  if(logoEl) logoEl.innerHTML=T('logoText');
   g('hint-main').textContent=T('hintMain');
   g('hint-sub').textContent=T('hintSub');
   const _es=g('every-shot-title'); if(_es) _es.textContent=T('everyShot');
@@ -331,9 +446,6 @@ function applyLang(){
   if(g('options-title')) g('options-title').textContent=T('optionsTitle');
   g('lbl-shot').textContent=T('shotOverlay');
   g('lbl-score').textContent=T('scorecardOverlay');
-  g('lbl-front9').textContent=T('front9');
-  g('lbl-back9').textContent=T('back9');
-  g('lbl-18h').textContent=T('h18');
   g('mode-tp').textContent=T('topar');
   g('mode-gr').textContent=T('gross');
   g('sd-title').textContent=T('sdTitle');
@@ -357,25 +469,43 @@ function applyLang(){
   g('lbl-opa').textContent=T('opaLbl');
   g('settings-lbl').textContent=T('settingsLbl');
   const nhil=g('nhi-lbl'); if(nhil) nhil.textContent=T('nextHoleShort');
-  // export section labels (elements may not exist if removed from HTML)
-  const expLblS=g('exp-lbl-single'); if(expLblS) expLblS.textContent=LANG==='zh'?'单张':'Single';
-  const expLblB=g('exp-lbl-batch'); if(expLblB) expLblB.textContent=LANG==='zh'?'批量':'Batch';
-  // Scorecard range labels (inline radios)
-  g('lbl-front9').textContent=LANG==='zh'?'前9':LANG==='ja'?'前半':LANG==='ko'?'전반':'F9';
-  g('lbl-back9').textContent=LANG==='zh'?'后9':LANG==='ja'?'後半':LANG==='ko'?'후반':'B9';
-  g('lbl-18h').textContent='18H';
-  const lbHS=g('lbl-exp-hole-seq'); if(lbHS) lbHS.textContent=LANG==='zh'?'当前洞击球包':'Hole Shots ZIP';
-  const lbSS=g('lbl-exp-sc-seq'); if(lbSS) lbSS.textContent=LANG==='zh'?'18洞计分卡包':'18 SC ZIP';
-  // player UI labels (B1)
-  const pmTitle=g('pm-title'); if(pmTitle) pmTitle.textContent=LANG==='zh'?'球员管理':LANG==='ja'?'プレーヤー管理':LANG==='ko'?'플레이어 관리':'Players';
-  const pmActiveTitle=g('pm-active-title'); if(pmActiveTitle) pmActiveTitle.textContent=LANG==='zh'?'已添加球员':LANG==='ja'?'追加済み':LANG==='ko'?'추가된 선수':'Active Players';
-  const pmAddTitle=g('pm-add-title'); if(pmAddTitle) pmAddTitle.textContent=LANG==='zh'?'添加球员':LANG==='ja'?'追加':LANG==='ko'?'추가':'Add Player';
-  const pmHistTitle=g('pm-hist-title'); if(pmHistTitle) pmHistTitle.textContent=LANG==='zh'?'历史球员':LANG==='ja'?'履歴':LANG==='ko'?'히스토리':'History';
-  const pmAddInp=g('pm-add-input'); if(pmAddInp) pmAddInp.placeholder=LANG==='zh'?'球员姓名…':'Name…';
-  const pmSearch=g('pm-hist-search'); if(pmSearch) pmSearch.placeholder=LANG==='zh'?'搜索球员…':'Search…';
-  const btnPM=g('btn-player-mgr'); if(btnPM) btnPM.textContent=LANG==='zh'?'编辑':LANG==='ja'?'編集':LANG==='ko'?'편집':LANG==='es'?'EDITAR':'EDIT';
-  const pSecLbl=g('player-section-lbl'); if(pSecLbl) pSecLbl.textContent=LANG==='zh'?'球员':LANG==='ja'?'プレーヤー':LANG==='ko'?'플레이어':'Players';
-  const showPNLbl=g('sd-show-pname-lbl'); if(showPNLbl) showPNLbl.textContent=LANG==='zh'?'显示球员名字':'Show Player Name';
+  // Scorecard range labels
+  g('lbl-front9').textContent=T('front9');
+  g('lbl-back9').textContent=T('back9');
+  g('lbl-18h').textContent=T('h18');
+  // Export modal labels
+  const lbHS=g('lbl-exp-hole-seq'); if(lbHS) lbHS.textContent=T('expHoleZip');
+  const lbSS=g('lbl-exp-sc-seq'); if(lbSS) lbSS.textContent=T('expScZip');
+  const lbES=g('lbl-exp-shot'); if(lbES) lbES.textContent=T('expShotPng');
+  const lbESc=g('lbl-exp-sc'); if(lbESc) lbESc.textContent=T('expScPng');
+  const expSingleLbl=g('exp-modal-lbl-single'); if(expSingleLbl) expSingleLbl.textContent=T('singleLbl');
+  const expBatchLbl=g('exp-modal-lbl-batch'); if(expBatchLbl) expBatchLbl.textContent=T('batchLbl');
+  const expAllLbl=g('exp-modal-lbl-all'); if(expAllLbl) expAllLbl.textContent=T('allLbl');
+  const expAllBtn=g('lbl-exp-all'); if(expAllBtn) expAllBtn.textContent=T('expAllZip');
+  const expTrigger=g('btn-export-trigger'); if(expTrigger) expTrigger.textContent=T('exportBtn2');
+  const expModalTitle=g('exp-modal-title-txt'); if(expModalTitle) expModalTitle.textContent=T('exportTitle');
+  // Player manager labels
+  const pmTitle=g('pm-title'); if(pmTitle) pmTitle.textContent=T('pmTitle');
+  const pmActiveTitle=g('pm-active-title'); if(pmActiveTitle) pmActiveTitle.textContent=T('pmActive');
+  const pmAddTitle=g('pm-add-title'); if(pmAddTitle) pmAddTitle.textContent=T('pmAdd');
+  const pmHistTitle=g('pm-hist-title'); if(pmHistTitle) pmHistTitle.textContent=T('pmHist');
+  const pmAddInp=g('pm-add-input'); if(pmAddInp) pmAddInp.placeholder=T('pmNamePh');
+  const pmSearch=g('pm-hist-search'); if(pmSearch) pmSearch.placeholder=T('pmSearchPh');
+  const btnPM=g('btn-player-mgr'); if(btnPM) btnPM.textContent=T('editBtn');
+  const pSecLbl=g('player-section-lbl'); if(pSecLbl) pSecLbl.textContent=T('playersLbl');
+  const showPNLbl=g('sd-show-pname-lbl'); if(showPNLbl) showPNLbl.textContent=T('showPlayerName');
+  // Right panel section labels
+  const rpCourseLbl=g('rp-course-lbl'); if(rpCourseLbl) rpCourseLbl.textContent=T('courseLbl');
+  const rpCourseEdit=g('btn-course-edit'); if(rpCourseEdit) rpCourseEdit.textContent=T('editBtn');
+  const rpPlayersLbl=g('rp-players-lbl'); if(rpPlayersLbl) rpPlayersLbl.textContent=T('playersLbl');
+  const rpShotLbl=g('rp-shot-lbl'); if(rpShotLbl) rpShotLbl.textContent=T('shotLbl');
+  const rpScoreLbl=g('rp-score-lbl'); if(rpScoreLbl) rpScoreLbl.textContent=T('scoreLbl');
+  const spTypeLbl=g('sp-type-lbl'); if(spTypeLbl) spTypeLbl.textContent=T('shotTypeLbl');
+  const spResultLbl=g('sp-result-lbl'); if(spResultLbl) spResultLbl.textContent=T('resultLbl');
+  const spFlagLbl=g('sp-flag-lbl'); if(spFlagLbl) spFlagLbl.textContent=T('flagsLbl');
+  const spNoteLbl=g('sp-note-lbl'); if(spNoteLbl) spNoteLbl.textContent=T('noteLbl');
+  const rpPrevBtn=g('btn-prev-hole'); if(rpPrevBtn) rpPrevBtn.textContent=T('prevBtn');
+  const rpNextBtn=g('btn-next-hole'); if(rpNextBtn) rpNextBtn.textContent=T('nextBtn');
   if(typeof buildPlayerArea==='function') buildPlayerArea();
   if(typeof buildFocusPlayerBtns==='function') buildFocusPlayerBtns();
   buildTypeButtons();
@@ -501,8 +631,8 @@ function addPlayer(name){
   name=(name||'').trim();
   if(!name) return false;
   if(!S.players) S.players=[];
-  if(S.players.length>=150){ miniToast(LANG==='zh'?'最多150名球员':'Max 150 players',true); return false; }
-  if(S.players.find(p=>p.name===name)){ miniToast(LANG==='zh'?'球员已存在':'Player exists',true); return false; }
+  if(S.players.length>=150){ miniToast(T('maxPlayers'),true); return false; }
+  if(S.players.find(p=>p.name===name)){ miniToast(T('playerExists'),true); return false; }
   const id='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
   const isFirst=S.players.length===0;
   S.players.push({id,name});
@@ -612,7 +742,7 @@ function updateCourseDisplay(){
   el.textContent=S.courseName||'';
 }
 function editCourseName(){
-  const v=prompt(LANG==='zh'?'球场名称：':'Course name:', S.courseName||'');
+  const v=prompt(T('courseNamePrompt'), S.courseName||'');
   if(v!==null){
     S.courseName=v;
     const inp=document.getElementById('inp-course');
@@ -718,6 +848,14 @@ function setShotType(type){
   render(); scheduleSave();
 }
 
+function onShotNoteInput(val){
+  const h=curHole();
+  if(h.delta===null) return;
+  if(!h.shots[h.shotIndex]) h.shots[h.shotIndex]={type:null};
+  h.shots[h.shotIndex].note=val||'';
+  render(); scheduleSave();
+}
+
 function getShotToPin(h,idx){
   // TEE shot (idx=0): always use shared hole length — same distance for all players
   if(idx===0) return h.holeLengthYds??null;
@@ -779,7 +917,7 @@ function resetScorecardPos(){
     S.scorecardPos[r]={x:0.5, y:0.83, centered:true};
   });
   redrawOnly(); scheduleSave();
-  miniToast('Scorecard position reset');
+  miniToast(T('scPosReset'));
   closeSettings();
 }
 
@@ -1738,9 +1876,13 @@ function drawShotOverlay(ctx,X,Y,scale){
     ctx.fillText(unit,rx+dw+3*scale,r3y+r3h/2);
   }
 
-  // CENTER: shot type label
+  // CENTER: shot type label or note
   let centerTxt='';
   if(isForMode || !isLast) centerTxt=shotTypeLabel(curType);
+  if(!centerTxt){
+    const shotNote=h.shots[si]?.note||'';
+    if(shotNote) centerTxt=shotNote.toUpperCase();
+  }
   if(centerTxt){
     ctx.font=`${th.shotTypeWeight} ${shotFontSz}px ${SF}`;
     ctx.fillStyle=th.shotTypeColor;
@@ -1862,10 +2004,21 @@ function expHideProgress(){
   if(wrap) wrap.style.display='none';
 }
 
+// ── Export Modal ──
+function openExportModal(){
+  const m=document.getElementById('export-modal');
+  if(m) m.style.display='';
+}
+function closeExportModal(e){
+  if(e&&e.target&&e.target.id!=='export-modal') return;
+  const m=document.getElementById('export-modal');
+  if(m) m.style.display='none';
+}
+
 // ── Single: Shot Overlay only ──
 function doExportShotOnly(){
   const h=curHole();
-  if(h.delta===null){ miniToast('Set score first',true); return; }
+  if(h.delta===null){ miniToast(T('setScoreFirst'),true); return; }
   const{w,h:H}=expGetDims();
   const canvas=expMakeShotCanvas(w,H);
   const st=(h.shots[h.shotIndex]?.type||'SHOT').toUpperCase();
@@ -1883,9 +2036,9 @@ function doExportScorecardOnly(){
 
 // ── Batch: current hole shot sequence → ZIP ──
 async function doExportHoleSequence(){
-  if(typeof JSZip==='undefined'){ miniToast('JSZip not loaded',true); return; }
+  if(typeof JSZip==='undefined'){ miniToast(T('jsZipNotLoaded'),true); return; }
   const players=S.players||[];
-  if(players.length===0){ miniToast('Add players first',true); return; }
+  if(players.length===0){ miniToast(T('addPlayersFirst'),true); return; }
   // Collect players that have a score on this hole
   const holeIdx=S.currentHole, holeNum=holeIdx+1;
   const savedPid=S.currentPlayerId;
@@ -1895,7 +2048,7 @@ async function doExportHoleSequence(){
       :(S.byPlayer[p.id]?.holes?.[holeIdx]?.delta??null);
     if(d!==null) exportPlayers.push(p);
   }
-  if(exportPlayers.length===0){ miniToast('Set score first',true); return; }
+  if(exportPlayers.length===0){ miniToast(T('setScoreFirst'),true); return; }
 
   const{w,h:H}=expGetDims();
   const zip=new JSZip();
@@ -1956,7 +2109,7 @@ async function doExportHoleSequence(){
     expShowProgress('Done ✓',1);
     setTimeout(expHideProgress,2500);
   } catch(err){
-    miniToast('Export error: '+err.message,true);
+    miniToast(T('exportError')+': '+err.message,true);
     expHideProgress();
     // restore original player
     S.currentPlayerId=savedPid;
@@ -1969,7 +2122,7 @@ async function doExportHoleSequence(){
 
 // ── Batch: scorecard sequence (hole 1-18) → ZIP ──
 async function doExportScorecardSequence(){
-  if(typeof JSZip==='undefined'){ miniToast('JSZip not loaded',true); return; }
+  if(typeof JSZip==='undefined'){ miniToast(T('jsZipNotLoaded'),true); return; }
   const{w,h}=expGetDims();
   const zip=new JSZip();
   const savedHole=S.currentHole, savedSummary=S.scorecardSummary;
@@ -2000,7 +2153,7 @@ async function doExportScorecardSequence(){
     expShowProgress('Done ✓',1);
     setTimeout(expHideProgress,2500);
   } catch(err){
-    miniToast('Export error: '+err.message,true);
+    miniToast(T('exportError')+': '+err.message,true);
     expHideProgress();
   } finally{
     S.currentHole=savedHole; S.scorecardSummary=savedSummary;
@@ -2010,7 +2163,7 @@ async function doExportScorecardSequence(){
 
 // ── EXPORT ALL (all players × all holes) ──
 async function doExportAll(){
-  if(typeof JSZip==='undefined'){ miniToast('JSZip not loaded',true); return; }
+  if(typeof JSZip==='undefined'){ miniToast(T('jsZipNotLoaded'),true); return; }
   const zip=new JSZip();
   const{w,h}=expGetDims();
   const savedHole=S.currentHole, savedPid=S.currentPlayerId, savedSummary=S.scorecardSummary;
@@ -2060,7 +2213,7 @@ async function doExportAll(){
     expShowProgress('Done ✓',1);
     setTimeout(expHideProgress,2500);
   } catch(err){
-    miniToast('Export error: '+err.message,true);
+    miniToast(T('exportError')+': '+err.message,true);
     expHideProgress();
     if(savedPid!==S.currentPlayerId){ saveCurrentPlayerData(); S.currentPlayerId=savedPid; loadPlayerData(effectivePlayerId()); }
     S.currentHole=savedHole; S.scorecardSummary=savedSummary;
@@ -2532,6 +2685,12 @@ function init(){
   applyUITheme(S.uiTheme);
   document.querySelectorAll('[data-ui-theme]').forEach(b=>b.classList.toggle('active',b.dataset.uiTheme===S.uiTheme));
   applyBg();
+  // Default to first player and first hole on startup
+  if(S.players.length>0 && S.currentPlayerId!==S.players[0].id){
+    switchToPlayer(S.players[0].id);
+  }
+  S.currentHole=0;
+
   if(typeof buildPlayerArea==='function') buildPlayerArea();
   // Defer first render to ensure layout is settled — prevents position jumping
   requestAnimationFrame(()=>{ render(); requestAnimationFrame(render); });

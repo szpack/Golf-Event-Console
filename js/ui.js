@@ -76,7 +76,7 @@ function buildPlayerArea(){
   if(players.length===0){
     const btn=document.createElement('button');
     btn.className='player-add-single';
-    btn.textContent='+ '+(LANG==='zh'?'添加球员':LANG==='ja'?'プレーヤー追加':LANG==='ko'?'플레이어 추가':'Add Player');
+    btn.textContent='+ '+T('pmAdd');
     btn.onclick=()=>openPlayerManager();
     grid.appendChild(btn);
     return;
@@ -168,7 +168,7 @@ function buildPlayerManager(){
     if((S.players||[]).length===0){
       const emp=document.createElement('div');
       emp.style.cssText='font-size:12px;color:var(--t3);padding:6px 0';
-      emp.textContent=LANG==='zh'?'暂无球员':'No players yet';
+      emp.textContent=T('noPlayersYet');
       activeList.appendChild(emp);
     }
   }
@@ -182,7 +182,7 @@ function buildPlayerManager(){
     if(hist.length===0){
       const emp=document.createElement('div');
       emp.style.cssText='font-size:12px;color:var(--t3);padding:4px 0';
-      emp.textContent=LANG==='zh'?'无历史球员':'No history';
+      emp.textContent=T('noHistory');
       histList.appendChild(emp);
     } else {
       hist.forEach(name=>{
@@ -193,7 +193,7 @@ function buildPlayerManager(){
         const addBtn=document.createElement('button');
         addBtn.className='pm-hist-add-btn';
         addBtn.textContent='+';
-        addBtn.onclick=()=>{ if(addPlayer(name)){buildPlayerManager();buildPlayerArea();miniToast(name+(LANG==='zh'?' 已添加':' added'));} };
+        addBtn.onclick=()=>{ if(addPlayer(name)){buildPlayerManager();buildPlayerArea();miniToast(T('playerAdded',name));} };
         item.appendChild(nameSpan);
         item.appendChild(addBtn);
         histList.appendChild(item);
@@ -211,7 +211,7 @@ function addPlayerFromInput(){
     inp.value='';
     buildPlayerManager();
     buildPlayerArea();
-    miniToast(name+(LANG==='zh'?' 已添加':' added'));
+    miniToast(T('playerAdded',name));
   }
 }
 
@@ -408,18 +408,19 @@ function buildDeltaBtn(){ buildPlayerArea(); }
 
 // ── TYPE BUTTONS ──
 const SHOT_KEYS={TEE:'T',APPR:'A',LAYUP:'L',CHIP:'C',PUTT:'U',PROV:'V',FOR_BIRDIE:'B',FOR_PAR:'P',FOR_BOGEY:'O'};
-const TYPE_ROW1=[
-  {type:'TEE',   labelKey:'typeTee'},
-  {type:'APPR',  labelKey:'typeAppr'},
-  {type:'LAYUP', labelKey:'typeLayup'},
-  {type:'CHIP',  labelKey:'typeChip'},
+const SP_TYPES=[
+  {type:'TEE',   label:'TEE'},
+  {type:'APPR',  label:'APPR'},
+  {type:'LAYUP', label:'LAYUP'},
+  {type:'CHIP',  label:'CHIP'},
+  {type:'PUTT',  label:'PUTT'},
 ];
-const TYPE_ROW2=[
+const SP_RESULTS=[
   {type:'FOR_BIRDIE', labelKey:'typeFB'},
   {type:'FOR_PAR',    labelKey:'typeFP'},
   {type:'FOR_BOGEY',  labelKey:'typeFBo'},
 ];
-const TYPE_ROW3=[
+const SP_FLAGS=[
   {type:'PENALTY', labelKey:'typePenalty'},
   {type:'PROV',  labelKey:'typeProv'},
 ];
@@ -427,23 +428,26 @@ const TYPE_ROW3=[
 function buildTypeButtons(){
   const h=curHole();
   const hasDelta=h.delta!==null;
-  const gross=getGross(h);
-  const si=h.shotIndex;
-  const isLast=hasDelta && gross && si===gross-1;
-  const curType=hasDelta?(h.shots[si]?.type||''):'';
+  const curType=hasDelta?(h.shots[h.shotIndex]?.type||''):'';
 
-  const rows=[[TYPE_ROW1,'type-row1'],[TYPE_ROW2,'type-row2'],[TYPE_ROW3,'type-row3']];
-  rows.forEach(([types,id])=>{
-    const row=document.getElementById(id); if(!row) return; row.innerHTML='';
-    types.forEach(({type,labelKey})=>{
+  const groups=[[SP_TYPES,'sp-type-btns'],[SP_RESULTS,'sp-result-btns'],[SP_FLAGS,'sp-flag-btns']];
+  groups.forEach(([items,id])=>{
+    const cont=document.getElementById(id); if(!cont) return; cont.innerHTML='';
+    items.forEach(item=>{
       const btn=document.createElement('button');
-      btn.className='tbtn'+(curType===type?' active':'');
-      btn.dataset.type=type;
-      btn.textContent=T(labelKey).toUpperCase();
-      btn.onclick=()=>setShotType(type);
-      row.appendChild(btn);
+      btn.className='sp-btn'+(curType===item.type?' active':'');
+      btn.dataset.type=item.type;
+      btn.textContent=item.label||(item.labelKey?T(item.labelKey).toUpperCase():'');
+      btn.onclick=()=>setShotType(item.type);
+      cont.appendChild(btn);
     });
   });
+  // Note input
+  const noteInp=document.getElementById('inp-shot-note');
+  if(noteInp){
+    const note=hasDelta?(h.shots[h.shotIndex]?.note||''):'';
+    noteInp.value=note;
+  }
 }
 
 // ── SHOT NUMBER BUTTONS ──
@@ -520,7 +524,7 @@ const SCORE_OPTIONS=[
   {delta:0, label:'Par'},
   {delta:1, label:'Bogey'},
   {delta:2, label:'Double'},
-  {delta:3, label:'Triple+'},
+  {delta:3, label:'Triple'},
 ];
 function buildScoreBtns(){
   const cont=document.getElementById('rp-score-btns');
@@ -584,7 +588,7 @@ function buildPickerItems(){
   const clearItem=document.createElement('div');
   clearItem.className='picker-item pi-clear';
   clearItem.textContent=T('pickerRows','clear');
-  clearItem.onclick=()=>{ clearHole(); closePicker(); miniToast(LANG==='zh'?'本洞已清空':'Hole cleared'); };
+  clearItem.onclick=()=>{ clearHole(); closePicker(); miniToast(T('holeCleared')); };
   cont.appendChild(clearItem);
 
   for(let d=-6;d<=12;d++){
@@ -761,9 +765,9 @@ function buildScoreDrawerBody(holeIdx){
   const clrBtn=document.querySelector('.sd-foot-clear');
   const canBtn=document.querySelector('.sd-foot-cancel');
   const okBtn=document.querySelector('.sd-foot-ok');
-  if(clrBtn) clrBtn.textContent=LANG==='zh'?'清空':'Clear';
-  if(canBtn) canBtn.textContent=LANG==='zh'?'取消':'Cancel';
-  if(okBtn) okBtn.textContent=LANG==='zh'?'确定':'OK';
+  if(clrBtn) clrBtn.textContent=T('clearBtn');
+  if(canBtn) canBtn.textContent=T('cancelBtn');
+  if(okBtn) okBtn.textContent=T('okBtn');
 }
 function scoreDrawerClear(){
   if(_scoreDrawerHole<0) return;

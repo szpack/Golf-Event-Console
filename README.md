@@ -117,6 +117,32 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v10.7.0 — 2026-03-07
+- 多语言全面完善：新增30+翻译key，覆盖UI标签、错误提示、导出弹窗、球员管理等
+- 消除所有JS中的硬编码 `LANG==='zh'` 三元判断，统一使用 `T()` 翻译函数
+- 修复中文 layup 错字："过度" → "过渡"
+- 5语言(en/zh/ja/ko/es)完整对齐：右侧面板标签、Shot分组标题、导出按钮文字、提示消息
+- 右侧面板所有标签加 ID 支持动态翻译（Course/Score/Shot Type/Result/Flags/Note/Export/PREV/NEXT）
+- Logo 文字走翻译系统（中文显示"高尔夫角标助手"，其他语言显示"GOLF OVERLAY"）
+
+### v10.6.1 — 2026-03-07
+- Score按钮样式统一：与球员名按钮同尺寸(28px/11px)，全部大写，等宽flex布局
+
+### v10.6.0 — 2026-03-07
+- 导出区收纳为蓝色"Export…"按钮，点击弹出模态框(Single/Batch/All分组)
+- Shot Type按钮标签简化：TEE OFF | APPR | LAYUP | CHIP | PUTT，一行排列
+
+### v10.5.0 — 2026-03-07
+- Shot状态面板重构：分为SHOT(导航)、SHOT TYPE(TEE OFF/APPROACH/LAYUP/CHIP/PUTT)、RESULT(FOR BIRDIE/PAR/BOGEY)、FLAGS(PENALTY/PROVISIONAL)四组
+- 新增NOTE临时录入区，可输入简短信息显示在Canvas角标状态区
+- 统一按钮样式：深色背景(#2a2f35)、6px圆角、黄色高亮active状态
+- 各组间距16px，按钮间距6px，标题12px灰色大写
+- Shot导航恢复"<"和">"双向按钮
+
+### v10.4.2 — 2026-03-07
+- Shot进度条：按钮加大加粗(26px/12px bold)，间距加大，单行不换行显示
+- 程序启动默认选中第一个球员、第一个球洞
+
 ### v10.4.1 — 2026-03-07
 - Shot进度条：未录入成绩时默认展示par个按钮(disabled状态)，录入成绩后按钮可点击
 

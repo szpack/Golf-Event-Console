@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Golf Overlay Tool v10.4.1</title>
+<title>Golf Overlay Tool v10.7.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./css/overlay.css?v=10.4.1">
+<link rel="stylesheet" href="./css/overlay.css?v=10.7.0">
 <script>
 /* Narrow-screen detection: use screen.width (physical device pixels)
    — immune to Safari "Request Desktop Website" which inflates viewport to ~980px */
@@ -22,7 +22,7 @@
 <!-- HEADER -->
 <div id="hdr">
   <div class="logo" id="logo-text">⛳ GOLF <span>OVERLAY</span></div>
-  <span class="logo-meta">v10.4.1<br><span id="logo-author" style="font-size:8px;color:var(--t3);letter-spacing:0">szpack@qq.com</span></span>
+  <span class="logo-meta">v10.7.0<br><span id="logo-author" style="font-size:8px;color:var(--t3);letter-spacing:0">szpack@qq.com</span></span>
   <span style="flex:1"></span>
   <div id="lang-wrap">
     <button id="btn-lang" onclick="toggleLangMenu()">🇺🇸 EN</button>
@@ -73,8 +73,8 @@
     <!-- 1. Course & Hole info -->
     <div class="rp-sec" id="rp-course-sec">
       <div class="rp-row">
-        <span class="rp-sec-label">Course</span>
-        <button class="rp-edit-btn" onclick="editCourseName()">EDIT</button>
+        <span class="rp-sec-label" id="rp-course-lbl">Course</span>
+        <button class="rp-edit-btn" id="btn-course-edit" onclick="editCourseName()">EDIT</button>
       </div>
       <div class="rp-row">
         <span id="rp-course-name" onclick="editCourseName()"></span>
@@ -84,8 +84,8 @@
         <span id="rp-hole-num">1</span>
         <span id="rp-par-tap" onclick="cycleParFocus()">Par <span id="rp-par-val">4</span></span>
         <span style="flex:1"></span>
-        <button class="rp-hn-btn" onclick="gotoPrevHole()">PREV</button>
-        <button class="rp-hn-btn rp-hn-next" onclick="gotoNextHole()">NEXT</button>
+        <button class="rp-hn-btn" id="btn-prev-hole" onclick="gotoPrevHole()">PREV</button>
+        <button class="rp-hn-btn rp-hn-next" id="btn-next-hole" onclick="gotoNextHole()">NEXT</button>
       </div>
     </div>
 
@@ -101,59 +101,83 @@
     <!-- 3. Score & Shot -->
     <div class="rp-sec" id="shot-section">
       <div class="rp-row">
-        <span class="rp-sec-label">Score</span>
+        <span class="rp-sec-label" id="rp-score-lbl">Score</span>
         <button class="rp-more-btn" id="btn-score-more" onclick="openPicker(event)">…</button>
       </div>
       <div id="rp-score-btns"></div>
+      <!-- Shot Nav -->
       <div class="rp-divider"></div>
-      <div class="rp-row">
-        <span class="rp-sec-label" id="rp-shot-lbl">Shot</span>
-        <span style="flex:1"></span>
-        <span class="rp-topin-lbl">To Pin</span>
-        <input type="number" id="inp-dist" placeholder="" min="0" max="999" onfocus="this.select()" class="rp-topin-input">
-        <span id="dist-unit" class="rp-dist-unit">yds</span>
+      <div class="sp-group">
+        <div class="sp-header">
+          <span class="sp-title" id="rp-shot-lbl">SHOT</span>
+          <span style="flex:1"></span>
+          <span class="rp-topin-lbl">To Pin</span>
+          <input type="number" id="inp-dist" placeholder="" min="0" max="999" onfocus="this.select()" class="rp-topin-input">
+          <span id="dist-unit" class="rp-dist-unit">yds</span>
+        </div>
+        <div id="rp-shot-progress">
+          <button class="sp-nav-btn" id="btn-prev-shot" onclick="prevShot()">&lt;</button>
+          <div id="shot-btns"></div>
+          <button class="sp-nav-btn sp-nav-next" id="btn-next-shot" onclick="nextShot()">&gt;</button>
+        </div>
       </div>
-      <div id="rp-shot-progress">
-        <div id="shot-btns"></div>
-        <span style="flex:1"></span>
-        <button class="rp-shot-nav rp-shot-nav-next" id="btn-next-shot" onclick="nextShot()">&gt;</button>
+      <!-- Shot Type -->
+      <div class="sp-group">
+        <span class="sp-title" id="sp-type-lbl">SHOT TYPE</span>
+        <div id="sp-type-btns" class="sp-btn-row"></div>
       </div>
-      <div id="type-row1" class="type-row"></div>
-      <div id="type-row2" class="type-row"></div>
-      <div id="type-row3" class="type-row"></div>
+      <!-- Result -->
+      <div class="sp-group">
+        <span class="sp-title" id="sp-result-lbl">RESULT</span>
+        <div id="sp-result-btns" class="sp-btn-row"></div>
+      </div>
+      <!-- Flags -->
+      <div class="sp-group">
+        <span class="sp-title" id="sp-flag-lbl">FLAGS</span>
+        <div id="sp-flag-btns" class="sp-btn-row"></div>
+      </div>
+      <!-- Temp Note -->
+      <div class="sp-group">
+        <span class="sp-title" id="sp-note-lbl">NOTE</span>
+        <input type="text" id="inp-shot-note" class="sp-note-input" maxlength="30" placeholder="temp note…" oninput="onShotNoteInput(this.value)">
+      </div>
     </div>
 
-    <!-- 4. Export -->
-    <div class="rp-sec" id="export-section">
-      <div class="rp-sec-label">Single</div>
-      <div class="exp-line" style="position:relative">
-        <button class="exp-minor-btn" id="btn-export-shot" onclick="doExportShotOnly()"><span id="lbl-exp-shot">Shot PNG</span></button>
-        <span class="exp-desc">Current shot overlay</span>
-        <div id="exp-status"></div>
+    <!-- 4. Export trigger -->
+    <div class="rp-sec" id="export-trigger-sec">
+      <button class="exp-trigger-btn" id="btn-export-trigger" onclick="openExportModal()">Export…</button>
+      <div id="exp-status"></div>
+    </div>
+
+<!-- Export Modal -->
+<div id="export-modal" class="exp-modal-overlay" style="display:none" onclick="closeExportModal(event)">
+  <div class="exp-modal" onclick="event.stopPropagation()">
+    <div class="exp-modal-hdr">
+      <span class="exp-modal-title" id="exp-modal-title-txt">Export</span>
+      <button class="exp-modal-close" onclick="closeExportModal()">&times;</button>
+    </div>
+    <div class="exp-modal-body">
+      <div class="exp-modal-group">
+        <span class="exp-modal-lbl" id="exp-modal-lbl-single">Single</span>
+        <button class="exp-modal-btn" onclick="doExportShotOnly()"><span id="lbl-exp-shot">Shot PNG</span></button>
+        <button class="exp-modal-btn" onclick="doExportScorecardOnly()"><span id="lbl-exp-sc">Scorecard PNG</span></button>
       </div>
-      <div class="exp-line">
-        <button class="exp-minor-btn" id="btn-export-sc" onclick="doExportScorecardOnly()"><span id="lbl-exp-sc">Scorecard PNG</span></button>
-        <span class="exp-desc">Current scorecard overlay</span>
+      <div class="exp-modal-group">
+        <span class="exp-modal-lbl" id="exp-modal-lbl-batch">Batch</span>
+        <button class="exp-modal-btn" onclick="doExportHoleSequence()"><span id="lbl-exp-hole-seq">Hole Shots ZIP</span></button>
+        <button class="exp-modal-btn" onclick="doExportScorecardSequence()"><span id="lbl-exp-sc-seq">Scorecard ZIP</span></button>
       </div>
-      <div class="rp-sec-label" style="margin-top:8px">Batch</div>
-      <div class="exp-line">
-        <button class="exp-minor-btn" id="btn-export-hole-seq" onclick="doExportHoleSequence()"><span id="lbl-exp-hole-seq">Hole Shots ZIP</span></button>
-        <span class="exp-desc">All players on this hole</span>
-      </div>
-      <div class="exp-line">
-        <button class="exp-minor-btn" id="btn-export-sc-seq" onclick="doExportScorecardSequence()"><span id="lbl-exp-sc-seq">Scorecard ZIP</span></button>
-        <span class="exp-desc">18-hole scorecard sequence</span>
-      </div>
-      <div class="rp-sec-label" style="margin-top:8px">All</div>
-      <div class="exp-line">
-        <button class="exp-minor-btn" id="btn-export-all" onclick="doExportAll()"><span>Export All ZIP</span></button>
-        <span class="exp-desc">All players × all holes</span>
+      <div class="exp-modal-group">
+        <span class="exp-modal-lbl" id="exp-modal-lbl-all">All</span>
+        <button class="exp-modal-btn" onclick="doExportAll()"><span id="lbl-exp-all">Export All ZIP</span></button>
       </div>
       <div id="exp-progress-wrap" style="display:none">
         <div id="exp-progress-bar-bg"><div id="exp-progress-bar"></div></div>
         <div id="exp-progress-txt"></div>
       </div>
     </div>
+  </div>
+</div>
 
     <div style="height:20px;flex-shrink:0"></div>
   </div>
@@ -434,8 +458,8 @@
 <div id="mini-toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./js/scoreboard.js?v=10.4.1"></script>
-<script src="./js/ui.js?v=10.4.1"></script>
-<script src="./js/app.js?v=10.4.1"></script>
+<script src="./js/scoreboard.js?v=10.7.0"></script>
+<script src="./js/ui.js?v=10.7.0"></script>
+<script src="./js/app.js?v=10.7.0"></script>
 </body>
 </html>
