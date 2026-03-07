@@ -758,11 +758,11 @@ function currentPlayerDisplayName(){
 }
 
 function resetAllShotIndex(hi){
-  S.holes[hi].shotIndex=0;
+  S.holes[hi].shotIndex=-1;
   if(S.byPlayer){
     for(const pid in S.byPlayer){
       const ph=S.byPlayer[pid].holes;
-      if(ph&&ph[hi]) ph[hi].shotIndex=0;
+      if(ph&&ph[hi]) ph[hi].shotIndex=-1;
     }
   }
 }
@@ -1019,12 +1019,14 @@ function reconcileShots(h){
   while(h.shots.length<gross) h.shots.push({});
   if(h.shotIndex>=gross) h.shotIndex=gross-1;
   if(h.shotIndex<-1) h.shotIndex=-1;
-  // Migrate legacy data: old `type` field → manualShotType (if manually set)
+  // Default shot types: first = TEE, last = PUTT (only if not manually set)
+  if(gross>=1&&!h.shots[0].manualShotType){ h.shots[0].manualShotType='TEE'; h.manualTypes[0]=true; }
+  if(gross>=2&&!h.shots[gross-1].manualShotType){ h.shots[gross-1].manualShotType='PUTT'; h.manualTypes[gross-1]=true; }
+  // Migrate legacy data & sync type field
   h.shots.forEach((s,i)=>{
     if(s.type && !s.manualShotType && h.manualTypes && h.manualTypes[i]){
       s.manualShotType=s.type;
     }
-    // Auto-populate legacy `type` for canvas rendering compatibility
     const eff=getEffectiveShot(h,i);
     s.type=eff.shotType;
   });
@@ -1066,26 +1068,15 @@ function setShotType(type){
   const gross=getGross(h);
 
   if(category==='type'){
-    // Shot Type: supports ready-mode continuous input
-    let targetIdx;
-    if(_readyIndex>=0 && _readyIndex<gross){
-      // Write to ready shot
-      targetIdx=_readyIndex;
-    } else {
-      // Write to current shot
-      targetIdx=h.shotIndex;
-    }
+    clearReady();
+    const targetIdx=h.shotIndex;
     if(!h.shots[targetIdx]) h.shots[targetIdx]={};
     const ts=h.shots[targetIdx];
-    if(ts.manualShotType===type){ ts.manualShotType=null; clearReady(); }
-    else { ts.manualShotType=type; }
-    // Sync legacy type
+    if(ts.manualShotType===type) ts.manualShotType=null;
+    else ts.manualShotType=type;
     const tEff=getEffectiveShot(h,targetIdx);
     ts.type=tEff.shotType;
     h.manualTypes[targetIdx]=!!ts.manualShotType;
-    // Activate ready for next shot
-    if(ts.manualShotType && targetIdx+1<gross) _readyIndex=targetIdx+1;
-    else clearReady();
   } else {
     // Purpose / Result / Flag: always modify current shot, cancel ready
     clearReady();

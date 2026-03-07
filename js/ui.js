@@ -520,65 +520,100 @@ function buildTypeButtons(){
 }
 
 // ── SHOT NUMBER BUTTONS ──
+// Click any number → set score to that number, update current shot
 function buildShotButtons(){
   const cont=document.getElementById('shot-btns');
   if(!cont) return;
-  cont.innerHTML='';
   const h=curHole(), gross=getGross(h), si=h.shotIndex;
   const noScore=(h.delta===null);
   const overviewMode=si<0;
   const ri=getReadyIndex();
-  // Always show par*2+1 slots
   const totalSlots=h.par*2+1;
-  for(let i=0;i<totalSlots;i++){
-    const btn=document.createElement('button');
-    if(noScore){
-      // No score set: all slots inactive
-      const isPlayed=false;
-      btn.className='snum-btn'+(i<h.par?' unused':' unused');
-      btn.disabled=true;
-    } else {
-      const isPlayed=i<gross; // within completed strokes
-      const isCur=!overviewMode&&isPlayed&&i===si;
-      const isReady=!overviewMode&&isPlayed&&ri>=0&&i===ri;
-      const isPast=!overviewMode&&isPlayed&&i<si;
-      let cls='snum-btn';
-      if(!isPlayed){
-        cls+=' unused';
-      } else if(isCur){
-        cls+=' cur';
-      } else if(isReady){
-        cls+=' ready';
-      } else if(overviewMode){
-        // All played shots get colored bg
-        cls+=' played';
-      } else if(isPast){
-        cls+=' played';
-      } else {
-        cls+=' future';
-      }
-      btn.className=cls;
-      if(isPlayed){
-        // Color the played buttons with delta color
-        if((overviewMode||i<si||i===si)&&cls.indexOf('played')>=0){
-          btn.style.background=deltaColorHex(h.delta);
-          btn.style.color='#fff';
-          btn.style.borderColor='transparent';
-        }
-        btn.onclick=(()=>{ const idx=i; return ()=>{ clearReady(); curHole().shotIndex=idx; render(); scheduleSave(); focusToPin(); }; })();
-      } else {
-        btn.disabled=true;
-      }
+  const barEnd=noScore?h.par:gross;
+  const color=noScore?null:deltaColorHex(h.delta);
+
+  // Reuse existing buttons if count matches; rebuild only when par changes
+  const existing=cont.querySelectorAll('.snum-btn');
+  const needRebuild=existing.length!==totalSlots;
+
+  if(needRebuild){
+    cont.innerHTML='';
+    for(let i=0;i<totalSlots;i++){
+      const btn=document.createElement('button');
+      btn.textContent=String(i+1);
+      btn.dataset.num=String(i+1);
+      cont.appendChild(btn);
     }
-    btn.textContent=String(i+1);
-    cont.appendChild(btn);
   }
-  // Auto-scroll to show current shot
-  if(!noScore&&gross>0){
-    const scrollTarget=overviewMode?gross-1:si;
-    const targetBtn=cont.children[scrollTarget];
-    if(targetBtn) setTimeout(()=>targetBtn.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'}),50);
+
+  const btns=cont.querySelectorAll(needRebuild?'button':'.snum-btn');
+  for(let i=0;i<totalSlots;i++){
+    const btn=btns[i];
+    const shotNum=i+1;
+    const inBar=i<barEnd;
+    const isCur=!noScore&&!overviewMode&&i===si;
+    const isReady=!noScore&&!overviewMode&&ri>=0&&i===ri;
+
+    let cls='snum-btn';
+    if(isCur) cls+=' cur';
+    else if(isReady) cls+=' ready';
+    else if(inBar&&!noScore) cls+=' played';
+    else if(inBar&&noScore) cls+=' default-bar';
+    else cls+=' unused';
+    btn.className=cls;
+    btn.style.cssText=''; // clear any leftover inline styles
+
+    btn.onclick=(()=>{
+      const num=shotNum;
+      return ()=>{
+        clearReady();
+        const hh=curHole();
+        const g=getGross(hh);
+        if(hh.delta!==null&&g&&num<=g){
+          // 已有成绩且点击在完成杆范围内：仅导航，不改分
+          hh.shotIndex=num-1;
+        } else {
+          // 无成绩 或 点击超出完成杆：设置/修改成绩
+          hh.delta=num-hh.par;
+          hh.manualTypes={};
+          reconcileShots(hh);
+          hh.shotIndex=-1;
+        }
+        render(); scheduleSave();
+      };
+    })();
   }
+
+  // Color bar — update in place
+  let bar=cont.querySelector('.shot-color-bar');
+  if(barEnd<=0){
+    if(bar) bar.style.display='none';
+  } else {
+    if(!bar){
+      bar=document.createElement('div');
+      bar.className='shot-color-bar';
+      cont.appendChild(bar);
+    }
+    bar.style.display='';
+    bar.className='shot-color-bar'+(noScore?' default':'');
+    bar.style.background=noScore?'rgba(255,255,255,.08)':color;
+    // Defer width calc to after layout
+    requestAnimationFrame(()=>{
+      const first=btns[0], last=btns[barEnd-1];
+      if(!first||!last) return;
+      bar.style.left=first.offsetLeft+'px';
+      bar.style.width=(last.offsetLeft+last.offsetWidth-first.offsetLeft)+'px';
+    });
+  }
+
+  // Auto-scroll — use scrollLeft on the scroll container to avoid affecting ancestor scroll
+  const scrollIdx=noScore?Math.min(h.par-1,totalSlots-1):(overviewMode?Math.max(barEnd-1,0):si);
+  const scrollParent=document.getElementById('rp-shot-progress');
+  if(btns[scrollIdx]&&scrollParent) setTimeout(()=>{
+    const btn=btns[scrollIdx];
+    const target=btn.offsetLeft-scrollParent.clientWidth/2+btn.offsetWidth/2;
+    scrollParent.scrollTo({left:Math.max(0,target),behavior:'smooth'});
+  },50);
 }
 
 // ── FOCUS: Par cycle on click ──
@@ -646,21 +681,24 @@ function buildScoreVal(){
 function buildToParRow(){
   const cont=document.getElementById('topar-cells');
   if(!cont) return;
-  cont.innerHTML='';
-  const h=curHole(), gross=getGross(h), si=h.shotIndex;
-  const noScore=(h.delta===null);
+  const h=curHole(), si=h.shotIndex;
   const totalSlots=h.par*2+1;
-  for(let i=0;i<totalSlots;i++){
-    const cell=document.createElement('div');
-    cell.className='topar-cell';
-    if(!noScore && i<gross){
-      const strokesSoFar=i+1;
-      const expectedPar=h.par*(strokesSoFar/gross);
-      const runningDelta=Math.round(strokesSoFar-expectedPar);
-      cell.textContent=runningDelta===0?'E':runningDelta>0?'+'+runningDelta:String(runningDelta);
-      if(i===si) cell.classList.add('tp-active');
+  const existing=cont.querySelectorAll('.topar-cell');
+  const needRebuild=existing.length!==totalSlots;
+  if(needRebuild){
+    cont.innerHTML='';
+    for(let i=0;i<totalSlots;i++){
+      const cell=document.createElement('div');
+      const shotNum=i+1;
+      const d=shotNum-h.par;
+      cell.textContent=d===0?'0':d>0?'+'+d:String(d);
+      cell.className='topar-cell';
+      cont.appendChild(cell);
     }
-    cont.appendChild(cell);
+  }
+  const cells=cont.querySelectorAll('.topar-cell');
+  for(let i=0;i<cells.length;i++){
+    cells[i].classList.toggle('tp-active',si>=0&&i===si);
   }
 }
 

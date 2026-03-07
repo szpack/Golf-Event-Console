@@ -117,6 +117,46 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v10.18.7 — 2026-03-07
+- 切换洞或录入新成绩后，进度条不选中任何杆（shotIndex=-1），击球信息版显示本洞成绩
+- 微信小程序同步
+
+### v10.18.6 — 2026-03-07
+- 每洞第一杆默认 Shot Type 为 TEE OFF，最后一杆默认为 PUTT（手动修改后不覆盖）
+- 微信小程序同步
+
+### v10.18.5 — 2026-03-07
+- 修复点击进度条数字时右侧面板横向跳动：scrollIntoView 改为 scrollParent.scrollTo 避免冒泡
+
+### v10.18.4 — 2026-03-07
+- 取消 Shot Type 的 ready-mode 自动跳转下一杆，设置后停留在当前杆
+- 微信小程序同步
+
+### v10.18.3 — 2026-03-07
+- 进度条点击逻辑：已有成绩时，点击完成杆范围内的数字仅导航（不改分），点击超出完成杆的数字才修改成绩
+- 微信小程序同步
+
+### v10.18.2 — 2026-03-07
+- 修复 To Par 行对齐：每格显示 shotNum - par（+1对齐bogey位置）
+- To Par 用 0 代替 E 表示标准杆
+- 修复点击进度条数字时右侧面板跳动：按钮和色条就地更新而非重建DOM
+- 微信小程序同步修复 To Par 对齐和显示
+
+### v10.18.1 — 2026-03-07
+- 色条改为单个连续长方形色块（从1到完成杆），颜色为delta对应色
+- 色块高度略高于数字按钮，当前杆黄色标识在色块区域内
+- 数字按钮透明背景浮于色块之上，视觉层级：色块 < 数字 < 黄色当前杆
+- Web端使用absolutepositioned div + requestAnimationFrame计算宽度
+- 微信小程序使用计算宽度的view实现同样效果
+
+### v10.18.0 — 2026-03-07
+- 杆数进度条重构：点击任意数字直接设置成绩（点N → gross=N, delta=N-par）
+- 成绩色条：已录入成绩从1连续铺色到最终杆数，使用delta颜色
+- 当前杆黄色高亮（高度略高于色条），未录入成绩显示弱化par色条
+- 移除past/future分类，简化为played/default-bar/unused/cur/ready
+- 浅色主题适配新进度条样式
+- 微信小程序同步更新click-to-set-score逻辑
+
 ### v10.17.1 — 2026-03-07
 - 恢复 Course 区到 Players 上方
 - To Pin 在未选中具体杆时（overview 模式）输入写入球洞距离 (holeLengthYds)
