@@ -847,3 +847,43 @@ html.narrow #mob-pv-cv{position:absolute;z-index:3;cursor:move}
   #cp-body{flex-direction:column}
   #cp-col-club{border-right:none;border-bottom:1px solid var(--bd);max-height:40vh}
 }
+
+/* ============================================================
+   IMPORT GOLFLIVE MODAL
+   ============================================================ */
+#import-gl-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000}
+.imp-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9001;
+  width:min(440px,90vw);max-height:85vh;background:var(--s1);border:1px solid var(--bd);
+  border-radius:12px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.imp-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;border-bottom:1px solid var(--bd)}
+.imp-modal-title{font:600 15px/1 'Roboto',sans-serif;color:var(--t1)}
+.imp-modal-close{background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;padding:0 4px}
+.imp-modal-body{flex:1;overflow-y:auto;padding:14px 18px;font:400 12px/1.5 'Roboto',sans-serif;color:var(--t1)}
+.imp-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 18px 14px;border-top:1px solid var(--bd)}
+/* info grid */
+.imp-info-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-bottom:10px}
+.imp-info-lbl{color:var(--t2);font-weight:500;white-space:nowrap}
+.imp-info-val{color:var(--t1);word-break:break-all}
+/* PAR row */
+.imp-par-row{margin:8px 0 10px;font-size:11px;color:var(--t2)}
+.imp-par-lbl{font-weight:600;margin-right:4px}
+.imp-par-cell{display:inline-block;width:18px;text-align:center;color:var(--t1);font-weight:500}
+.imp-par-sum{color:var(--t2);margin-left:4px}
+/* player preview */
+.imp-player-preview{margin:10px 0}
+.imp-sec-title{font:600 11px/1 'Roboto',sans-serif;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.imp-player-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--s2)}
+.imp-pname{color:var(--t1);font-weight:500}
+.imp-pscore{color:var(--t2);font-size:11px}
+.imp-player-more{color:var(--t3);font-size:11px;margin-top:4px}
+/* warnings / errors */
+.imp-warnings{margin:10px 0;padding:8px;background:rgba(255,180,0,.08);border-radius:6px}
+.imp-warn-title{color:#f0a020}
+.imp-warn-item{font-size:11px;color:var(--t2);padding:2px 0;line-height:1.4}
+.imp-warn-more{font-size:11px;color:var(--t3);margin-top:4px}
+.imp-errors{padding:8px;background:rgba(255,60,60,.08);border-radius:6px}
+.imp-err-title{color:#ef4444}
+.imp-err-item{font-size:11px;color:var(--t2);padding:2px 0;line-height:1.4}
+/* accent button in export modal */
+.exp-modal-btn-accent{background:var(--mg)!important;border-color:var(--mg)!important;color:#fff!important}
+.exp-modal-btn-accent:hover{filter:brightness(1.15)}

@@ -582,10 +582,8 @@ function applyLang(){
   g('lbl-opa').textContent=T('opaLbl');
   g('settings-lbl').textContent=T('settingsLbl');
   const nhil=g('nhi-lbl'); if(nhil) nhil.textContent=T('nextHoleShort');
-  // Scorecard range labels
-  g('lbl-front9').textContent=T('front9');
-  g('lbl-back9').textContent=T('back9');
-  g('lbl-18h').textContent=T('h18');
+  // Scorecard range labels — dynamic based on hole count
+  updateScoreRangeLabels();
   // Export modal labels
   const lbHS=g('lbl-exp-hole-seq'); if(lbHS) lbHS.textContent=T('expHoleZip');
   const lbSS=g('lbl-exp-sc-seq'); if(lbSS) lbSS.textContent=T('expScZip');
@@ -1054,6 +1052,26 @@ function clearHole(){
 }
 
 function setMode(m){ S.displayMode=m; D.ws().displayMode=m; render(); scheduleSave(); }
+
+// Update F9/B9/18H radio labels to reflect actual hole count
+function updateScoreRangeLabels(){
+  const total=D.holeCount();
+  const half=Math.ceil(total/2);
+  const lf=document.getElementById('lbl-front9');
+  const lb=document.getElementById('lbl-back9');
+  const la=document.getElementById('lbl-18h');
+  if(total===18){
+    // Standard 18-hole: use translated labels
+    if(lf) lf.textContent=T('front9');
+    if(lb) lb.textContent=T('back9');
+    if(la) la.textContent=T('h18');
+  } else {
+    // Non-standard hole count: show actual numbers
+    if(lf) lf.textContent='F'+half;
+    if(lb) lb.textContent='B'+(total-half);
+    if(la) la.textContent=total+'H';
+  }
+}
 
 function focusToPin(){
   // disabled — no longer auto-focus to pin input
@@ -3152,6 +3170,9 @@ function init(){
   document.getElementById('chk-total').checked=S.showTotal;
   const _scRangeSec=document.getElementById('score-range-sec'); if(_scRangeSec){ _scRangeSec.style.display=''; _scRangeSec.classList.toggle('show',!!S.showScore); }
   document.querySelectorAll('[name=scr]').forEach(r=>r.checked=r.value===S.scoreRange);
+  // Clear transient scorecardSummary on load so radio setting takes effect
+  S.scorecardSummary=null; D.ws().scorecardSummary=null;
+  updateScoreRangeLabels();
   document.getElementById('bg-opacity').value=Math.round((S.bgOpacity??1)*100);
   document.getElementById('bg-opacity-val').textContent=Math.round((S.bgOpacity??1)*100)+'%';
   document.getElementById('overlay-opacity').value=Math.round((S.overlayOpacity??1)*100);

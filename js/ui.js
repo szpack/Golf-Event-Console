@@ -1027,6 +1027,7 @@ function doNewRound(){
   }
   D.syncS(S);
   if(typeof buildPlayerArea==='function') buildPlayerArea();
+  if(typeof updateScoreRangeLabels==='function') updateScoreRangeLabels();
   closeNewRound(); render(); scheduleSave();
 }
 

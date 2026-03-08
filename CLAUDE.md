@@ -32,6 +32,12 @@ GolfOverlay/
 │   ├── roundManager.js # Round状态管理
 │   ├── coursePicker.js # 球场选择器UI
 │   ├── sessionIO.js   # 球局JSON导入导出
+│   ├── import/          # GolfLive成绩导入模块
+│   │   ├── importTypes.js      # 导入类型定义（JSDoc）
+│   │   ├── fileSniffer.js      # 文件格式识别
+│   │   ├── golfliveParser.js   # GolfLive表解析器
+│   │   ├── roundBuilder.js     # 导入数据→Round构建
+│   │   └── importController.js # 导入流程控制+UI桥接
 │   └── app.js          # 应用核心（最后加载）
 ├── assets/
 │   └── icons/          # 图标资源（备用）
@@ -93,6 +99,11 @@ v4.0 统一数据访问层（IIFE `D`），无依赖：
 <script src="js/roundManager.js"></script>    <!-- 依赖 courseDatabase.js -->
 <script src="js/coursePicker.js"></script>    <!-- 依赖 courseDatabase.js + roundManager.js + data.js -->
 <script src="js/sessionIO.js"></script>      <!-- 依赖 data.js -->
+<script src="js/import/importTypes.js"></script>     <!-- 无依赖，JSDoc only -->
+<script src="js/import/fileSniffer.js"></script>     <!-- 无依赖 -->
+<script src="js/import/golfliveParser.js"></script>  <!-- 依赖 SheetJS (XLSX) -->
+<script src="js/import/roundBuilder.js"></script>    <!-- 依赖 data.js -->
+<script src="js/import/importController.js"></script><!-- 依赖以上 import 模块 + UI -->
 <script src="js/app.js"></script>             <!-- 依赖所有以上 -->
 ```
 

@@ -380,6 +380,8 @@ const CoursePicker = (function(){
 
     // Rebuild S
     D.syncS(S);
+    // Update radio labels for new hole count
+    if(typeof updateScoreRangeLabels==='function') updateScoreRangeLabels();
   }
 
   function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

@@ -117,6 +117,21 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v13.0.1 — 2026-03-08
+- 修复计分卡显示范围bug：F9/B9/18H标签现在根据实际洞数动态更新（如9洞球场显示F5/B4/9H）
+- 修复scorecardSummary持久化导致的显示覆盖问题：页面加载时自动清除临时summary状态
+- 球场选择、导入、新一轮后自动刷新范围标签
+
+### v13.0.0 — 2026-03-08
+- 新增 GolfLive 成绩导入功能：支持从 GolfLive 导出的 Excel 文件导入比赛成绩
+- 支持 .xlsx 和伪 .xls（实际为 xlsx/zip）格式自动识别
+- 宽松解析：自动识别洞列、PAR行、球员行，支持中英文列名别名
+- to-par 成绩自动转换为 gross，totals 由 holes 重算（不信外部汇总值）
+- 导入预览界面：显示比赛信息、球员列表、warnings
+- 完整 importAudit 审计记录，保留导入来源和校验差异
+- 不生成 shot 级假数据，不依赖球场主库
+- 模块化架构：fileSniffer / golfliveParser / roundBuilder / importController 四层分离
+
 ### v12.2.0 — 2026-03-08
 - 修复刷新丢数据根本原因：adjPlayerDelta/setPlayerHoleDelta缺少scheduleSave()调用，数据仅存内存未持久化
 - 修复S对象与D.ws()双写不同步：所有直接写入S的属性（bgOpacity、showShot、theme等20+处）同步写入D.ws()，防止D.syncS(S)覆盖未持久化的变更
