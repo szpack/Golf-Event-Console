@@ -117,6 +117,9 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v12.1.4 — 2026-03-08
+- 修复刷新丢数据：syncFromS增加前置守卫（S未初始化时直接跳过），所有字段写入增加undefined防御，防止空S覆盖localStorage中的有效数据
+
 ### v12.1.3 — 2026-03-08
 - 修复刷新丢数据：syncFromS增加安全网，将S.holes[].delta回写D.scores的gross，防止遗留代码路径绕过D API导致数据未持久化
 

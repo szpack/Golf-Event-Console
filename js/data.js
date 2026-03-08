@@ -852,60 +852,61 @@ const D = (function(){
    * Target: remove once all UI code writes D.ws() directly instead of S.
    */
   function syncFromS(S){
-    _ws.currentHole      = S.currentHole;
-    _ws.currentPlayerId  = S.currentPlayerId;
-    _ws.displayMode      = S.displayMode;
-    _ws.ratio            = S.ratio;
-    _ws.exportRes        = S.exportRes;
-    _ws.bgOpacity        = S.bgOpacity;
-    _ws.overlayOpacity   = S.overlayOpacity;
-    _ws.showShot         = S.showShot;
-    _ws.showScore        = S.showScore;
-    _ws.showTotal        = S.showTotal;
-    _ws.showDist         = S.showDist;
-    _ws.showPlayerName   = S.showPlayerName;
-    _ws.safeZone         = S.safeZone;
-    _ws.szSize           = S.szSize;
-    _ws.scoreRange       = S.scoreRange;
-    _ws.scorecardSummary = S.scorecardSummary;
-    _ws.lang             = S.lang;
-    _ws.theme            = S.theme;
-    _ws.uiTheme          = S.uiTheme;
-    _ws.overlayPos       = S.overlayPos;
-    _ws.scorecardPos     = S.scorecardPos;
-    _ws.userBg           = S.userBg;
-    _ws.playerHistory    = S.playerHistory;
-    _ws.recentPlayerIds  = S.recentPlayerIds;
-    _ws.focusSlots       = S.focusSlots;
-    _ws.playerName       = S.playerName;
+    // Guard: if S has not been populated by syncS yet, skip entirely.
+    // This prevents overwriting good _ws data with undefined values.
+    if(!S || !S.holes) return;
+
+    if(S.currentHole != null)     _ws.currentHole      = S.currentHole;
+    if(S.currentPlayerId !== undefined) _ws.currentPlayerId = S.currentPlayerId;
+    if(S.displayMode)             _ws.displayMode      = S.displayMode;
+    if(S.ratio)                   _ws.ratio            = S.ratio;
+    if(S.exportRes)               _ws.exportRes        = S.exportRes;
+    if(S.bgOpacity != null)       _ws.bgOpacity        = S.bgOpacity;
+    if(S.overlayOpacity != null)  _ws.overlayOpacity   = S.overlayOpacity;
+    if(S.showShot != null)        _ws.showShot         = S.showShot;
+    if(S.showScore != null)       _ws.showScore        = S.showScore;
+    if(S.showTotal != null)       _ws.showTotal        = S.showTotal;
+    if(S.showDist != null)        _ws.showDist         = S.showDist;
+    if(S.showPlayerName != null)  _ws.showPlayerName   = S.showPlayerName;
+    if(S.safeZone != null)        _ws.safeZone         = S.safeZone;
+    if(S.szSize != null)          _ws.szSize           = S.szSize;
+    if(S.scoreRange)              _ws.scoreRange       = S.scoreRange;
+    // scorecardSummary can be null legitimately
+    _ws.scorecardSummary = S.scorecardSummary || null;
+    if(S.lang)                    _ws.lang             = S.lang;
+    if(S.theme)                   _ws.theme            = S.theme;
+    if(S.uiTheme)                 _ws.uiTheme          = S.uiTheme;
+    if(S.overlayPos)              _ws.overlayPos       = S.overlayPos;
+    if(S.scorecardPos)            _ws.scorecardPos     = S.scorecardPos;
+    // userBg can be null legitimately (no background)
+    _ws.userBg = S.userBg || null;
+    if(S.playerHistory)           _ws.playerHistory    = S.playerHistory;
+    if(S.recentPlayerIds)         _ws.recentPlayerIds  = S.recentPlayerIds;
+    if(S.focusSlots)              _ws.focusSlots       = S.focusSlots;
+    if(S.playerName)              _ws.playerName       = S.playerName;
     // shotIndex from current hole
     if(S.holes && S.holes[S.currentHole]){
       _ws.shotIndex = S.holes[S.currentHole].shotIndex;
     }
     // Course name
-    _sc.course.courseName  = S.courseName || '';
-    _sc.course.selectedTee = S.selectedTee || 'blue';
+    if(S.courseName !== undefined)  _sc.course.courseName  = S.courseName || '';
+    if(S.selectedTee !== undefined) _sc.course.selectedTee = S.selectedTee || 'blue';
 
     // ── Safety net: capture S.holes delta back to D.scores ──
     // In v4, all mutations should go through D API, but legacy code may still
     // write S.holes[].delta directly. This ensures those changes are not lost.
-    if(S.holes && S.holes.length){
-      var curPid = pid();
-      ensureScores(curPid);
-      var ph = _sc.scores[curPid].holes;
-      for(var i = 0; i < S.holes.length && i < ph.length; i++){
-        var sh = S.holes[i];
-        if(sh.delta !== null && sh.delta !== undefined){
-          var par = getCourseHole(i).par || 0;
-          var expectedGross = par + sh.delta;
-          if(ph[i].gross !== expectedGross){
-            ph[i].gross = expectedGross;
-            _syncStatus(ph[i]);
-            _reconcileShots(ph[i]);
-          }
-        } else if(sh.delta === null && ph[i].gross !== null){
-          // S says no score but D has one — S.delta=null could be stale view,
-          // do NOT clear D.gross here (D is the truth)
+    var curPid = pid();
+    ensureScores(curPid);
+    var ph = _sc.scores[curPid].holes;
+    for(var i = 0; i < S.holes.length && i < ph.length; i++){
+      var sh = S.holes[i];
+      if(sh.delta !== null && sh.delta !== undefined){
+        var par = getCourseHole(i).par || 0;
+        var expectedGross = par + sh.delta;
+        if(ph[i].gross !== expectedGross){
+          ph[i].gross = expectedGross;
+          _syncStatus(ph[i]);
+          _reconcileShots(ph[i]);
         }
       }
     }
