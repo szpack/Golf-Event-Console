@@ -117,6 +117,10 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v11.5.3 — 2026-03-08
+- 修复Canvas击球信息版恢复为只显示lastTag（最后一次点击的标签）
+- 批量导出每杆击球时，为每个已设标签单独导出一帧PNG（如type=APPROACH+result=TREES→导出2张）
+
 ### v11.5.2 — 2026-03-08
 - 击球信息版导出显示所有已设标签（Type·Purpose·Result·Flags），不再仅显示lastTag
 - 导出文件名包含所有标签（如 TEE_FOR_BIRDIE_FAIRWAY）

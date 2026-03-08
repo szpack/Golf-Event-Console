@@ -2403,25 +2403,18 @@ function drawShotOverlay(ctx,X,Y,scale){
     ctx.fillText(unit,rx+dw+3*scale,r3y+r3h/2);
   }
 
-  // CENTER: show all assigned tags
+  // CENTER: show only the lastTag label (most recently clicked)
   let centerTxt='';
   if(!overviewMode){
-    centerTxt=shotAllTagsLabel(h,si);
-    // Fallback to note if no tags
+    centerTxt=shotLastTagLabel(h,si);
+    // Fallback to note if no tag label
     if(!centerTxt){
       const shotNote=h.shots[si]?.note||'';
       if(shotNote) centerTxt=shotNote.toUpperCase();
     }
   }
   if(centerTxt){
-    // Auto-shrink font if text is too wide for available space
-    const availW=rW-(shotToPin!==null?100*scale:0);
-    let fSz=shotFontSz;
-    ctx.font=`${th.shotTypeWeight} ${fSz}px ${SF}`;
-    while(ctx.measureText(centerTxt).width>availW&&fSz>9*scale){
-      fSz-=1;
-      ctx.font=`${th.shotTypeWeight} ${fSz}px ${SF}`;
-    }
+    ctx.font=`${th.shotTypeWeight} ${shotFontSz}px ${SF}`;
     ctx.fillStyle=th.shotTypeColor;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(centerTxt,midX,r3y+r3h/2);
@@ -2593,10 +2586,11 @@ async function doExportHoleSequence(){
 
   const{w,h:H}=expGetDims();
   const zip=new JSZip();
-  let totalSteps=0;
+  // totalSteps is approximate (can't know tag count per shot in advance)
+  let totalSteps=1;
   exportPlayers.forEach(p=>{
     const d=(p.id===effectivePlayerId())?S.holes[holeIdx].delta:(S.byPlayer[p.id].holes[holeIdx].delta);
-    totalSteps+=safePar(S.holes[holeIdx])+d+1; // gross + final
+    totalSteps+=(safePar(S.holes[holeIdx])+d)*2+1; // rough estimate: avg 2 tags per shot + final
   });
   let step=0;
 
@@ -2619,16 +2613,27 @@ async function doExportHoleSequence(){
         if(i===gross-1){
           const ft=expGetForType(h.delta);
           if(!h.shots[i]) h.shots[i]={};
-          h.shots[i].purpose=ft; h.shots[i].lastTag='purpose';
+          if(!h.shots[i].purpose) { h.shots[i].purpose=ft; h.shots[i].lastTag='purpose'; }
         }
-        step++;
-        expShowProgress(`${pName} S${i+1}`,step/totalSteps);
-        const canvas=expMakeShotCanvas(w,H);
         const eff=getEffectiveShot(h,i);
-        const tagParts=[eff.type,eff.purpose,eff.result,eff.flags].filter(Boolean).map(t=>t.replace(/ /g,'_').toUpperCase());
-        const st=tagParts.length>0?tagParts.join('_'):'SHOT';
-        zip.file(`${pName}_${expHole(holeNum)}_S${String(i+1).padStart(2,'0')}_${expShotType(st)}_${expResLabel()}.png`,await expCanvasToBlob(canvas));
-        await expSleep(10);
+        const setTags=[];
+        if(eff.type)    setTags.push({cat:'type',    val:eff.type});
+        if(eff.purpose) setTags.push({cat:'purpose', val:eff.purpose});
+        if(eff.result)  setTags.push({cat:'result',  val:eff.result});
+        if(eff.flags)   setTags.push({cat:'flags',   val:eff.flags});
+        if(setTags.length===0) setTags.push({cat:'type',val:'SHOT'});
+        const savedLastTag=h.shots[i]?.lastTag;
+        for(const tag of setTags){
+          if(!h.shots[i]) h.shots[i]={};
+          h.shots[i].lastTag=tag.cat;
+          step++;
+          const tagStr=tag.val.replace(/ /g,'_').toUpperCase();
+          expShowProgress(`${pName} S${i+1} ${tagStr}`,step/totalSteps);
+          const canvas=expMakeShotCanvas(w,H);
+          zip.file(`${pName}_${expHole(holeNum)}_S${String(i+1).padStart(2,'0')}_${expShotType(tagStr)}_${expResLabel()}.png`,await expCanvasToBlob(canvas));
+          await expSleep(10);
+        }
+        if(h.shots[i]) h.shots[i].lastTag=savedLastTag;
       }
       // FINAL frame: overview mode (shotIndex=-1 for result badge)
       h.shotIndex=-1;
