@@ -79,7 +79,7 @@ const STRINGS = {
     singleLbl:'Single', batchLbl:'Batch', allLbl:'All',
     expShotPng:'Shot PNG', expScPng:'Scorecard PNG',
     expHoleZip:'Hole Shots ZIP', expScZip:'Scorecard ZIP', expAllZip:'Export All ZIP',
-    dataLbl:'Data', expScCsv:'Scorecard CSV', expDescCsv:'Scorecard as CSV text file',
+    dataLbl:'Data', expRoundExport:'Export Round', expDescRoundExport:'Save current round as JSON', expRoundImport:'Import Round', expDescRoundImport:'Load round from JSON file',
     // Player manager
     pmTitle:'Players', pmActive:'Active Players', pmAdd:'Add Player', pmHist:'History',
     pmNamePh:'Name…', pmSearchPh:'Search…',
@@ -177,7 +177,7 @@ const STRINGS = {
     singleLbl:'单张', batchLbl:'批量', allLbl:'全部',
     expShotPng:'击球 PNG', expScPng:'计分卡 PNG',
     expHoleZip:'当前洞击球包', expScZip:'18洞计分卡包', expAllZip:'全部导出 ZIP',
-    dataLbl:'数据', expScCsv:'成绩 CSV', expDescCsv:'计分卡导出为CSV文本',
+    dataLbl:'数据', expRoundExport:'导出本局', expDescRoundExport:'保存当前球局为JSON文件', expRoundImport:'导入本局', expDescRoundImport:'从JSON文件恢复球局',
     // Player manager
     pmTitle:'球员管理', pmActive:'已添加球员', pmAdd:'添加球员', pmHist:'历史球员',
     pmNamePh:'球员姓名…', pmSearchPh:'搜索球员…',
@@ -274,7 +274,7 @@ const STRINGS = {
     singleLbl:'単体', batchLbl:'バッチ', allLbl:'全て',
     expShotPng:'ショット PNG', expScPng:'スコアカード PNG',
     expHoleZip:'ホールショット ZIP', expScZip:'スコアカード ZIP', expAllZip:'全てエクスポート ZIP',
-    dataLbl:'データ', expScCsv:'スコアカード CSV', expDescCsv:'スコアカードをCSVで出力',
+    dataLbl:'データ', expRoundExport:'ラウンド出力', expDescRoundExport:'現在のラウンドをJSONで保存', expRoundImport:'ラウンド入力', expDescRoundImport:'JSONファイルからラウンドを復元',
     // Player manager
     pmTitle:'プレーヤー管理', pmActive:'追加済み', pmAdd:'プレーヤー追加', pmHist:'履歴',
     pmNamePh:'名前…', pmSearchPh:'検索…',
@@ -368,7 +368,7 @@ const STRINGS = {
     singleLbl:'단일', batchLbl:'배치', allLbl:'전체',
     expShotPng:'샷 PNG', expScPng:'스코어카드 PNG',
     expHoleZip:'홀 샷 ZIP', expScZip:'스코어카드 ZIP', expAllZip:'전체 내보내기 ZIP',
-    dataLbl:'데이터', expScCsv:'스코어카드 CSV', expDescCsv:'스코어카드를 CSV로 내보내기',
+    dataLbl:'데이터', expRoundExport:'라운드 내보내기', expDescRoundExport:'현재 라운드를 JSON으로 저장', expRoundImport:'라운드 가져오기', expDescRoundImport:'JSON 파일에서 라운드 복원',
     // Player manager
     pmTitle:'플레이어 관리', pmActive:'추가된 선수', pmAdd:'플레이어 추가', pmHist:'히스토리',
     pmNamePh:'이름…', pmSearchPh:'검색…',
@@ -462,7 +462,7 @@ const STRINGS = {
     singleLbl:'Individual', batchLbl:'Lote', allLbl:'Todo',
     expShotPng:'Golpe PNG', expScPng:'Tarjeta PNG',
     expHoleZip:'Golpes del hoyo ZIP', expScZip:'Tarjeta ZIP', expAllZip:'Exportar todo ZIP',
-    dataLbl:'Datos', expScCsv:'Tarjeta CSV', expDescCsv:'Exportar tarjeta como CSV',
+    dataLbl:'Datos', expRoundExport:'Exportar Ronda', expDescRoundExport:'Guardar ronda actual como JSON', expRoundImport:'Importar Ronda', expDescRoundImport:'Restaurar ronda desde archivo JSON',
     // Player manager
     pmTitle:'Jugadores', pmActive:'Jugadores activos', pmAdd:'Añadir jugador', pmHist:'Historial',
     pmNamePh:'Nombre…', pmSearchPh:'Buscar…',
@@ -596,8 +596,10 @@ function applyLang(){
   const expAllLbl=g('exp-modal-lbl-all'); if(expAllLbl) expAllLbl.textContent=T('allLbl');
   const expAllBtn=g('lbl-exp-all'); if(expAllBtn) expAllBtn.textContent=T('expAllZip');
   const expDataLbl=g('exp-modal-lbl-data'); if(expDataLbl) expDataLbl.textContent=T('dataLbl');
-  const expCsvBtn=g('lbl-exp-csv'); if(expCsvBtn) expCsvBtn.textContent=T('expScCsv');
-  const expCsvDesc=g('exp-desc-csv'); if(expCsvDesc) expCsvDesc.textContent=T('expDescCsv');
+  const expRndExp=g('lbl-exp-round-export'); if(expRndExp) expRndExp.textContent=T('expRoundExport');
+  const expRndExpDesc=g('exp-desc-round-export'); if(expRndExpDesc) expRndExpDesc.textContent=T('expDescRoundExport');
+  const expRndImp=g('lbl-exp-round-import'); if(expRndImp) expRndImp.textContent=T('expRoundImport');
+  const expRndImpDesc=g('exp-desc-round-import'); if(expRndImpDesc) expRndImpDesc.textContent=T('expDescRoundImport');
   const expTrigger=g('btn-export-trigger'); if(expTrigger) expTrigger.textContent=T('exportBtn2');
   const expModalTitle=g('exp-modal-title-txt'); if(expModalTitle) expModalTitle.textContent=T('exportTitle');
   // Player manager labels
@@ -2690,157 +2692,6 @@ async function doExportAll(){
   redrawOnly();
 }
 
-// ── Export: Scorecard CSV ──
-function doExportScoreCSV(){
-  const players=(S.players&&S.players.length>0)?S.players:[{id:effectivePlayerId(),name:S.playerName||'PLAYER'}];
-  const course=S.courseName||'Golf Course';
-  const date=new Date().toISOString().slice(0,10);
-  const rows=[];
-  rows.push('# '+course+' — '+date);
-  rows.push('');
-  // Header
-  const _csvTotal=S.holes.length||18;
-  const _csvHalf=Math.ceil(_csvTotal/2);
-  const _csvSec=_csvTotal-_csvHalf;
-  const hdr=[''].concat(Array.from({length:_csvHalf},(_,i)=>String(i+1)),['OUT'],Array.from({length:_csvSec},(_,i)=>String(i+_csvHalf+1)),['IN','TOT']);
-  rows.push(hdr.join(','));
-  // Par row
-  const pars=['PAR'];
-  let outPar=0,inPar=0;
-  for(let i=0;i<_csvHalf;i++){const p=safePar(S.holes[i]);outPar+=p;pars.push(hasRealPar(S.holes[i])?p:'');}
-  pars.push(outPar);
-  for(let i=_csvHalf;i<_csvTotal;i++){const p=safePar(S.holes[i]);inPar+=p;pars.push(hasRealPar(S.holes[i])?p:'');}
-  pars.push(inPar); pars.push(outPar+inPar);
-  rows.push(pars.join(','));
-  // Player rows
-  players.forEach(p=>{
-    const gross=[p.name];
-    let outG=0,inG=0,outPlayed=0,inPlayed=0;
-    for(let i=0;i<_csvHalf;i++){
-      const d=getPlayerHoleDelta(p.id,i);
-      if(d!==null){const g=safePar(S.holes[i])+d;gross.push(g);outG+=g;outPlayed++;}
-      else gross.push('');
-    }
-    gross.push(outPlayed?outG:'');
-    for(let i=_csvHalf;i<_csvTotal;i++){
-      const d=getPlayerHoleDelta(p.id,i);
-      if(d!==null){const g=safePar(S.holes[i])+d;gross.push(g);inG+=g;inPlayed++;}
-      else gross.push('');
-    }
-    gross.push(inPlayed?inG:'');
-    gross.push((outPlayed||inPlayed)?(outG+inG):'');
-    rows.push(gross.join(','));
-    // To-par row
-    const tp=[' (to par)'];
-    let outD=0,inD=0;
-    for(let i=0;i<_csvHalf;i++){
-      const d=getPlayerHoleDelta(p.id,i);
-      if(d!==null){tp.push(fmtDeltaDisplay(d));outD+=d;}else tp.push('');
-    }
-    tp.push(outPlayed?fmtDeltaDisplay(outD):'');
-    for(let i=_csvHalf;i<_csvTotal;i++){
-      const d=getPlayerHoleDelta(p.id,i);
-      if(d!==null){tp.push(fmtDeltaDisplay(d));inD+=d;}else tp.push('');
-    }
-    tp.push(inPlayed?fmtDeltaDisplay(inD):'');
-    tp.push((outPlayed||inPlayed)?fmtDeltaDisplay(outD+inD):'');
-    rows.push(tp.join(','));
-  });
-  const csv=rows.join('\n');
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  const fn='scorecard_'+date+'.csv';
-  expDownloadBlob(blob,fn);
-  miniToast('CSV exported ✓');
-}
-
-// ── Import: Scorecard CSV ──
-function doImportScoreCSV(){
-  const inp=document.createElement('input');
-  inp.type='file'; inp.accept='.csv,text/csv';
-  inp.onchange=function(){
-    const f=inp.files[0]; if(!f) return;
-    const reader=new FileReader();
-    reader.onload=function(){
-      try{
-        _parseAndApplyCSV(reader.result);
-        miniToast('CSV imported ✓');
-      } catch(e){
-        console.error('[importCSV]',e);
-        miniToast('Import failed: '+e.message,true);
-      }
-    };
-    reader.readAsText(f);
-  };
-  inp.click();
-}
-
-function _parseAndApplyCSV(text){
-  const lines=text.split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
-  if(lines.length<2) throw new Error('CSV too short');
-
-  // Find header row (starts with comma or has hole numbers)
-  let hdrIdx=lines.findIndex(l=>/^,?\s*1\s*,/.test(l));
-  if(hdrIdx<0) hdrIdx=0;
-  const hdr=lines[hdrIdx].split(',');
-
-  // Determine hole count from header
-  const holeCount=S.holes.length||18;
-  const half=Math.ceil(holeCount/2);
-
-  // Parse PAR row (skip — we don't modify pars)
-  let dataStart=hdrIdx+1;
-  if(lines[dataStart]&&lines[dataStart].split(',')[0].trim().toUpperCase()==='PAR') dataStart++;
-
-  // Parse player rows: gross row followed by optional (to par) row
-  const playerImports=[];
-  for(let i=dataStart;i<lines.length;i++){
-    const cols=lines[i].split(',');
-    const label=cols[0].trim();
-    if(!label||label.startsWith('(to par)')) continue; // skip to-par rows
-    // This is a player gross row
-    const name=label;
-    const grosses=[];
-    // Columns: name, h1..h9, OUT, h10..h18, IN, TOT
-    let ci=1;
-    for(let h=0;h<half;h++){ grosses.push(_parseIntOrNull(cols[ci++])); }
-    ci++; // skip OUT
-    for(let h=half;h<holeCount;h++){ grosses.push(_parseIntOrNull(cols[ci++])); }
-    playerImports.push({name,grosses});
-    // Skip the following (to par) row if present
-    if(i+1<lines.length && lines[i+1].split(',')[0].trim().startsWith('(to par)')) i++;
-  }
-
-  if(playerImports.length===0) throw new Error('No player data found');
-
-  // For each imported player, find or create, then set gross scores
-  playerImports.forEach(imp=>{
-    let player=D.sc().players.find(p=>p.name===imp.name);
-    if(!player){
-      addPlayer(imp.name);
-      player=D.sc().players.find(p=>p.name===imp.name);
-    }
-    if(!player) return;
-    D.ensureScores(player.id);
-
-    for(let hi=0;hi<holeCount;hi++){
-      const g=imp.grosses[hi];
-      if(g===null) continue;
-      D.setPlayerGross(player.id, hi, g);
-    }
-  });
-
-  D.syncS(S);
-  if(typeof buildHoleNav==='function') buildHoleNav();
-  if(typeof buildPlayerArea==='function') buildPlayerArea();
-  render();
-  scheduleSave();
-}
-
-function _parseIntOrNull(s){
-  if(!s) return null;
-  const n=parseInt(s.trim(),10);
-  return isNaN(n)?null:n;
-}
 
 // ============================================================
 // MOBILE RECORD MODE

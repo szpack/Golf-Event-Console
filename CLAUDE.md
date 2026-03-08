@@ -31,6 +31,7 @@ GolfOverlay/
 │   ├── ui.js           # 界面操作
 │   ├── roundManager.js # Round状态管理
 │   ├── coursePicker.js # 球场选择器UI
+│   ├── sessionIO.js   # 球局JSON导入导出
 │   └── app.js          # 应用核心（最后加载）
 ├── assets/
 │   └── icons/          # 图标资源（备用）
@@ -91,6 +92,7 @@ v4.0 统一数据访问层（IIFE `D`），无依赖：
 <script src="js/ui.js"></script>              <!-- 依赖 scoreboard.js, data.js -->
 <script src="js/roundManager.js"></script>    <!-- 依赖 courseDatabase.js -->
 <script src="js/coursePicker.js"></script>    <!-- 依赖 courseDatabase.js + roundManager.js + data.js -->
+<script src="js/sessionIO.js"></script>      <!-- 依赖 data.js -->
 <script src="js/app.js"></script>             <!-- 依赖所有以上 -->
 ```
 

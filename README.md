@@ -117,6 +117,12 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v12.1.0 — 2026-03-08
+- 新增球局JSON导入导出功能（sessionIO.js），支持完整保存/恢复本局数据
+- 导出包含球场快照、球员、逐洞成绩、每杆shot详情及UI偏好
+- 导入时校验结构、版本迁移、规范化、重建派生状态（status/gross同步、totals清空重算）
+- 删除旧CSV导入导出功能，替换为JSON球局导入导出
+
 ### v12.0.3 — 2026-03-08
 - 修复Canvas击球进度条：鸟/低于标准杆时overview模式只显示实际杆数（不再补齐到标准杆）
 - 无成绩时进度条区分标准杆区（深色）与超标准杆区（浅色），使用sqFutureBg/sqFutureTextColor
