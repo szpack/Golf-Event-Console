@@ -117,6 +117,11 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v11.5.2 — 2026-03-08
+- 击球信息版导出显示所有已设标签（Type·Purpose·Result·Flags），不再仅显示lastTag
+- 导出文件名包含所有标签（如 TEE_FOR_BIRDIE_FAIRWAY）
+- 标签文字过长时自动缩小字号适配
+
 ### v11.5.1 — 2026-03-08
 - Hole区：Par移至HOLE X同行，右侧显示球洞长度（码）
 - Shot区重构：SHOT标题行右侧显示To Pin输入框，下方Type/Purpose/Result/Flags/Note间距收紧

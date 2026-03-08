@@ -148,14 +148,15 @@ function shotLastTagLabel(h, idx){
   return shotTypeLabel(val);
 }
 
-// Display label: all assigned tags (for right panel / export)
-function shotDisplayLabel(h, idx){
+/** All assigned tags joined with separator (for canvas export overlay) */
+function shotAllTagsLabel(h, idx){
   const eff=getEffectiveShot(h, idx);
-  if(eff.flags)   return shotTypeLabel(eff.flags);
-  if(eff.purpose) return shotTypeLabel(eff.purpose);
-  if(eff.result)  return shotTypeLabel(eff.result);
-  if(eff.type)    return shotTypeLabel(eff.type);
-  return '';
+  const parts=[];
+  if(eff.type)    parts.push(shotTypeLabel(eff.type));
+  if(eff.purpose) parts.push(shotTypeLabel(eff.purpose));
+  if(eff.result)  parts.push(shotTypeLabel(eff.result));
+  if(eff.flags)   parts.push(shotTypeLabel(eff.flags));
+  return parts.join('  ·  ');
 }
 
 // ── SCORECARD GEOMETRY ──

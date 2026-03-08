@@ -2403,18 +2403,25 @@ function drawShotOverlay(ctx,X,Y,scale){
     ctx.fillText(unit,rx+dw+3*scale,r3y+r3h/2);
   }
 
-  // CENTER: show only the lastTag label (most recently clicked)
+  // CENTER: show all assigned tags
   let centerTxt='';
   if(!overviewMode){
-    centerTxt=shotLastTagLabel(h,si);
-    // Fallback to note if no tag label
+    centerTxt=shotAllTagsLabel(h,si);
+    // Fallback to note if no tags
     if(!centerTxt){
       const shotNote=h.shots[si]?.note||'';
       if(shotNote) centerTxt=shotNote.toUpperCase();
     }
   }
   if(centerTxt){
-    ctx.font=`${th.shotTypeWeight} ${shotFontSz}px ${SF}`;
+    // Auto-shrink font if text is too wide for available space
+    const availW=rW-(shotToPin!==null?100*scale:0);
+    let fSz=shotFontSz;
+    ctx.font=`${th.shotTypeWeight} ${fSz}px ${SF}`;
+    while(ctx.measureText(centerTxt).width>availW&&fSz>9*scale){
+      fSz-=1;
+      ctx.font=`${th.shotTypeWeight} ${fSz}px ${SF}`;
+    }
     ctx.fillStyle=th.shotTypeColor;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(centerTxt,midX,r3y+r3h/2);
@@ -2618,7 +2625,8 @@ async function doExportHoleSequence(){
         expShowProgress(`${pName} S${i+1}`,step/totalSteps);
         const canvas=expMakeShotCanvas(w,H);
         const eff=getEffectiveShot(h,i);
-        const st=(eff.type||eff.purpose||'SHOT').replace(/ /g,'_').toUpperCase();
+        const tagParts=[eff.type,eff.purpose,eff.result,eff.flags].filter(Boolean).map(t=>t.replace(/ /g,'_').toUpperCase());
+        const st=tagParts.length>0?tagParts.join('_'):'SHOT';
         zip.file(`${pName}_${expHole(holeNum)}_S${String(i+1).padStart(2,'0')}_${expShotType(st)}_${expResLabel()}.png`,await expCanvasToBlob(canvas));
         await expSleep(10);
       }
