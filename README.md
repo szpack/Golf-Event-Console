@@ -117,6 +117,9 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v11.4.6 — 2026-03-08
+- 修复计分卡叠加层TOT总杆：已打洞实际杆数+未打洞标准杆（如1号洞+1则显示73）
+
 ### v11.4.5 — 2026-03-08
 - 修正计分卡叠加层：每洞/OUT/IN跟随displayMode(ToPar/Gross)，仅TOT始终显示Gross
 

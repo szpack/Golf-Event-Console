@@ -379,19 +379,19 @@ function drawScorecardOverlay(ctx,X,Y,scale){
     drawSubTot(inX, scoreIn, parPlayedIn, parPlayedIn>0);
   }
 
-  // TOT: only played holes (delta!==null within scoreEnd), respect displayMode
-  const _playedHoles=S.holes.slice(start,Math.min(end,scoreEnd)).filter(h=>h.delta!==null);
-  const _totDelta=_playedHoles.reduce((a,h)=>a+h.delta,0);
-  const _totGross=_playedHoles.reduce((a,h)=>a+safePar(h)+h.delta,0);
+  // TOT: played holes actual gross + remaining holes par (always Gross)
+  const _allHoles=S.holes.slice(start,end);
+  const _seEnd=Math.min(end,scoreEnd);
+  let _totGross=0;
+  for(let i=start;i<end;i++){
+    const hh=S.holes[i];
+    if(i<_seEnd && hh.delta!==null) _totGross+=safePar(hh)+hh.delta;
+    else _totGross+=safePar(hh);
+  }
   ctx.fillStyle=th.totTextColor;
   ctx.font=`${th.totWeight} ${totFontSz}px ${SF}`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  if(_playedHoles.length>0){
-    ctx.fillText(String(_totGross),X+totX+totalW/2,scY+scoreRowH/2);
-  } else {
-    ctx.fillStyle=th.emptyDashColor;
-    ctx.fillText('—',X+totX+totalW/2,scY+scoreRowH/2);
-  }
+  ctx.fillText(String(_totGross),X+totX+totalW/2,scY+scoreRowH/2);
 
   // Outer border
   ctx.strokeStyle='rgba(27,94,59,0.25)'; ctx.lineWidth=1;
