@@ -25,6 +25,7 @@ GolfOverlay/
 ├── data/
 │   └── courses.json    # 球场数据库（静态JSON）
 ├── js/
+│   ├── data.js         # v4.0 统一数据访问层（最先加载）
 │   ├── courseDatabase.js # 球场数据管理层
 │   ├── scoreboard.js   # 计分卡逻辑
 │   ├── ui.js           # 界面操作
@@ -58,10 +59,22 @@ GolfOverlay/
 - `openNewRound / closeNewRound / doNewRound` — 新一轮模态框
 - `setupLongPress / wireAll` — 长按支持与全局事件绑定
 
+### `js/data.js`
+v4.0 统一数据访问层（IIFE `D`），无依赖：
+- `D.sc()` — scorecardData（业务数据：球场快照、球员、成绩）
+- `D.ws()` — workspaceState（UI状态：当前洞、显示偏好、Canvas布局）
+- `D.pid()` — 当前活跃球员ID
+- `D.getCourseHole / setCourseHolePar / setCourseHoleYards` — 球场洞访问
+- `D.getPlayerGross / getPlayerDelta / setPlayerGross / adjPlayerGross` — 成绩读写
+- `D.setShotTag / setShotToPin / setShotNotes` — 击球标签读写
+- `D.totalGross / totalDelta / projectedGross / playedCount` — 派生计算
+- `D.save / load / migrateV531` — 持久化与迁移
+- `D.syncS(S) / syncFromS(S)` — 兼容层：S 视图重建/回写
+
 ### `js/app.js`
 应用核心，最后加载：
 - `STRINGS / LANG / T / setLang / applyLang` — 国际化
-- `defState / S / scheduleSave / doSave / loadSaved` — 全局状态与持久化
+- `S / scheduleSave / doSave / loadSaved` — 全局状态视图与持久化（通过 D API）
 - `applyBg / setBgFile / clearBg` — 背景图管理
 - `setPar / setDelta / adjDelta / reconcileShots / clearHole` — 成绩变更
 - `setMode / prevShot / nextShot / setShotType / getShotToPin / setShotToPin` — 击球操作
@@ -72,19 +85,25 @@ GolfOverlay/
 
 ## 加载顺序
 ```html
+<script src="js/data.js"></script>            <!-- v4.0 数据层，无依赖 -->
 <script src="js/courseDatabase.js"></script>  <!-- 无依赖 -->
 <script src="js/scoreboard.js"></script>      <!-- 无依赖 -->
-<script src="js/ui.js"></script>              <!-- 依赖 scoreboard.js -->
+<script src="js/ui.js"></script>              <!-- 依赖 scoreboard.js, data.js -->
 <script src="js/roundManager.js"></script>    <!-- 依赖 courseDatabase.js -->
-<script src="js/coursePicker.js"></script>    <!-- 依赖 courseDatabase.js + roundManager.js -->
+<script src="js/coursePicker.js"></script>    <!-- 依赖 courseDatabase.js + roundManager.js + data.js -->
 <script src="js/app.js"></script>             <!-- 依赖所有以上 -->
 ```
 
-## 数据模型
-- localStorage key: `golf_v531`（状态），`golf_v531_bg`（背景图base64，单独存储）
-- 全局状态对象 `S`，结构见 `defState()`
-- 18个洞：`{par, delta, shots[], shotIndex, manualTypes{}, toPins{}}`
-- Delta：相对标准杆差值（-1=小鸟, 0=标准杆, +1=柏忌）
+## 数据模型 (v4.0)
+- localStorage keys: `golf_v4_scorecard`（业务数据），`golf_v4_workspace`（UI状态），`golf_v531_bg`（背景图base64）
+- 旧版 `golf_v531` 自动迁移到 v4 格式，保留不删除
+- `D.sc()` — scorecardData：球场快照 + 球员列表 + 成绩数据
+- `D.ws()` — workspaceState：当前洞、显示偏好、Canvas布局
+- `S` — 兼容视图对象，通过 `D.syncS(S)` 重建
+- 球场洞快照：`{ number, par, yards, holeId }`
+- 球员成绩：`{ gross, putts, penalties, notes, status, shots[] }`
+- 击球数据：`{ type, purpose, result, flags[], notes, lastTag, toPin }`
+- Gross 为主数据，Delta = gross - par（派生值）
 
 ## 开发注意事项
 - 所有JS为全局函数，无模块系统，脚本加载顺序即依赖顺序

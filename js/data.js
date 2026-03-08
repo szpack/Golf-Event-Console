@@ -1,0 +1,941 @@
+// ============================================================
+// data.js — v4.0 Data Access Layer
+// Unified data model: scorecardData (business) + workspaceState (UI)
+// No dependencies — load before all other JS files
+// ============================================================
+
+const D = (function(){
+
+  // ── Constants ──
+  const LS_SC   = 'golf_v4_scorecard';
+  const LS_WS   = 'golf_v4_workspace';
+  const LS_OLD  = 'golf_v531';
+  const LS_BG   = 'golf_v531_bg';
+  const SESSION = '__session__';
+
+  let _sc = null;   // scorecardData
+  let _ws = null;   // workspaceState
+
+  // ══════════════════════════════════════════
+  // DEFAULT FACTORIES
+  // ══════════════════════════════════════════
+
+  /** Course hole snapshot — immutable per-round copy of course DB hole */
+  function defCourseHole(i){
+    return { number:(i||0)+1, par:4, yards:null, holeId:null };
+  }
+
+  /**
+   * Player hole score — business data per player per hole.
+   *
+   * status ↔ gross 约束规则:
+   *   not_started  → gross MUST be null (尚未开始打该洞)
+   *   in_progress  → gross >= 1 (正在打，杆数为当前已知值，可能还会变)
+   *   completed    → gross >= 1 (该洞已完成，杆数为最终值)
+   *   picked_up    → gross MAY be null or >= 1 (捡球弃洞，gross 可记录捡球前杆数或留空)
+   *
+   * 所有 mutation API (setPlayerGross, adjPlayerGross, clearPlayerHole)
+   * 会自动维护 status，外部也可通过 setHoleStatus() 手动覆盖。
+   */
+  function defPlayerHole(){
+    return {
+      gross:null,       // actual strokes (primary data), null = not played
+      net:null,         // net strokes after handicap (null = not computed)
+      putts:null,       // putt count (null = not tracked)
+      penalties:0,      // penalty count
+      notes:'',         // hole-level notes
+      status:'not_started', // not_started | in_progress | completed | picked_up
+      shots:[]          // per-shot detail array, length may differ from gross (incomplete record OK)
+    };
+  }
+
+  /** Single shot detail */
+  function defShot(shotNumber){
+    return {
+      shotNumber:shotNumber||null, // 1-based shot ordinal within the hole
+      type:null,        // TEE | APPR | LAYUP | CHIP | PUTT
+      purpose:null,     // FOR_BIRDIE | FOR_PAR | FOR_BOGEY | FOR_DOUBLE | FOR_TRIPLE
+      result:null,      // GREEN | FAIRWAY | BUNKER | LIGHT_ROUGH | HEAVY_ROUGH | WATER | TREES
+      flags:[],         // [PENALTY, PROV, ...] — array, supports multiple flags
+      notes:'',         // per-shot notes
+      lastTag:null,     // which category was last set (for canvas display)
+      toPin:null        // distance to pin in yards
+    };
+  }
+
+  /**
+   * Player record — extensible structure.
+   *
+   * 排序规则: players[] 数组索引是唯一排序真相。
+   *   order 字段仅为冗余标记（方便调试/导出阅读），不参与运行时排序逻辑。
+   *   如需重排球员顺序，直接操作 players[] 数组（splice/sort），
+   *   然后调用 _reindex() 让 order 跟随数组索引同步。
+   */
+  function defPlayer(id, name, order){
+    return {
+      id:id,
+      name:name||'',
+      order:(order!=null)?order:0,
+      nickname:'',
+      team:'',
+      color:'',
+      handicapIndex:null,
+      courseHandicap:null,
+      notes:''
+    };
+  }
+
+  /** Full scorecard data — business data only, exportable */
+  function defScorecard(){
+    return {
+      version:'4.0',
+      course:{
+        // Course snapshot for this round — frozen copy from courseDB at round creation.
+        // Changes to the course database do NOT retroactively affect this snapshot.
+        clubId:null,
+        clubName:'',
+        courseName:'',
+        routingId:null,
+        routingName:'',
+        routingSourceType:null,  // 'fixed_course' | 'composed_segments' | null
+        routingMeta:{},
+        selectedTee:'blue',
+        holeCount:18,
+        // holeSnapshot[]: par/yards frozen at round creation, immutable during the round
+        holeSnapshot:Array.from({length:18},(_,i)=>defCourseHole(i))
+      },
+      players:[],
+      // scores[playerId] = { holes: [...], totals: {} }
+      // ⚠️ totals 是派生缓存容器（如 totalPutts, GIR% 等），不是独立业务真相。
+      //    totals 必须始终可由 holes[] 重新计算得出，不可存储 holes 无法派生的数据。
+      //    持久化时一并保存以避免重复计算，但 load 后可随时从 holes 重建。
+      scores:{},
+      meta:{
+        createdAt:new Date().toISOString(),
+        updatedAt:new Date().toISOString()
+      }
+    };
+  }
+
+  /**
+   * Workspace state — UI only, not part of scorecard export.
+   *
+   * 持久化说明:
+   *   save() 时 userBg 字段被设为 null 写入 LS_WS（不含 base64 本体）。
+   *   背景图 base64 独立存于 LS_BG ('golf_v531_bg')。
+   *   load() 后从 LS_BG 读回赋给 _ws.userBg，仅作为运行时内存引用。
+   *   即：userBg 在 workspace JSON 中始终为 null，运行时由 load() 填充。
+   */
+  function defWorkspace(){
+    return {
+      currentHole:0,
+      currentPlayerId:null,
+      shotIndex:-1,             // global shot nav index (-1 = overview)
+      scorecardSummary:null,    // 'out' | 'in' | 'tot' | null
+      displayMode:'topar',
+      ratio:'16:9',
+      exportRes:2160,
+      bgOpacity:1.0,
+      overlayOpacity:1.0,
+      showShot:true,
+      showScore:true,
+      showTotal:true,
+      showDist:false,
+      showPlayerName:true,
+      safeZone:false,
+      szSize:'10',
+      scoreRange:'18',
+      lang:'en',
+      theme:'classic',
+      uiTheme:'auto',
+      overlayPos:{
+        '16:9':{x:0.695,y:0.05},
+        '9:16':{x:0.542,y:0.05},
+        '1:1': {x:0.695,y:0.05}
+      },
+      scorecardPos:{
+        '16:9':{x:0.5,y:0.76,centered:true},
+        '9:16':{x:0.5,y:0.89,centered:true},
+        '1:1': {x:0.5,y:0.84,centered:true}
+      },
+      userBg:null,              // ⚠️ 运行时引用，不落持久化 — 见上方说明
+      playerHistory:[],
+      recentPlayerIds:[],
+      focusSlots:[],
+      playerName:'PLAYER'
+    };
+  }
+
+  // ══════════════════════════════════════════
+  // INITIALIZATION
+  // ══════════════════════════════════════════
+
+  function init(){
+    _sc = defScorecard();
+    _ws = defWorkspace();
+  }
+
+  // ══════════════════════════════════════════
+  // CORE ACCESSORS
+  // ══════════════════════════════════════════
+
+  function sc(){ return _sc; }
+  function ws(){ return _ws; }
+  function pid(){ return _ws.currentPlayerId || SESSION; }
+
+  // ══════════════════════════════════════════
+  // COURSE HOLE ACCESS
+  // ══════════════════════════════════════════
+
+  function getCourseHole(i){
+    return (_sc.course.holeSnapshot && _sc.course.holeSnapshot[i]) || defCourseHole(i);
+  }
+  function setCourseHolePar(i, par){
+    if(_sc.course.holeSnapshot[i]) _sc.course.holeSnapshot[i].par = par;
+    _touch();
+  }
+  function setCourseHoleYards(i, yards){
+    if(_sc.course.holeSnapshot[i]) _sc.course.holeSnapshot[i].yards = yards;
+    _touch();
+  }
+  function holeCount(){ return _sc.course.holeCount || 18; }
+
+  /** Resize course holes array (e.g. when switching to a 9-hole course) */
+  function setHoleCount(n){
+    _sc.course.holeCount = n;
+    while(_sc.course.holeSnapshot.length < n) _sc.course.holeSnapshot.push(defCourseHole(_sc.course.holeSnapshot.length));
+    if(_sc.course.holeSnapshot.length > n) _sc.course.holeSnapshot.length = n;
+    // Resize all player score arrays
+    for(var pid in _sc.scores){
+      var ph = _sc.scores[pid].holes;
+      while(ph.length < n) ph.push(defPlayerHole());
+      if(ph.length > n) ph.length = n;
+    }
+    _touch();
+  }
+
+  // ══════════════════════════════════════════
+  // PLAYER SCORES — ensure / access
+  // ══════════════════════════════════════════
+
+  function ensureScores(playerId){
+    if(!_sc.scores) _sc.scores = {};
+    var hc = holeCount();
+    if(!_sc.scores[playerId]){
+      _sc.scores[playerId] = { holes:Array.from({length:hc},()=>defPlayerHole()), totals:{} };
+    } else {
+      if(!_sc.scores[playerId].totals) _sc.scores[playerId].totals = {};
+      var ph = _sc.scores[playerId].holes;
+      while(ph.length < hc) ph.push(defPlayerHole());
+      if(ph.length > hc) ph.length = hc;
+    }
+  }
+
+  function getPlayerHole(playerId, hi){
+    ensureScores(playerId);
+    return _sc.scores[playerId].holes[hi];
+  }
+
+  function getPlayerGross(playerId, hi){
+    var h = getPlayerHole(playerId, hi);
+    return h ? h.gross : null;
+  }
+
+  function getPlayerDelta(playerId, hi){
+    var g = getPlayerGross(playerId, hi);
+    if(g === null) return null;
+    var par = getCourseHole(hi).par || 0;
+    return g - par;
+  }
+
+  function getPlayerShots(playerId, hi){
+    var h = getPlayerHole(playerId, hi);
+    return h ? h.shots : [];
+  }
+
+  function getPlayerShot(playerId, hi, si){
+    var h = getPlayerHole(playerId, hi);
+    if(!h || !h.shots[si]) return defShot();
+    var s = h.shots[si];
+    // Ensure flags is always an array
+    if(!Array.isArray(s.flags)) s.flags = s.flags ? [s.flags] : [];
+    return s;
+  }
+
+  // ══════════════════════════════════════════
+  // SCORE MUTATIONS
+  // ══════════════════════════════════════════
+
+  function setPlayerGross(playerId, hi, gross){
+    ensureScores(playerId);
+    var h = _sc.scores[playerId].holes[hi];
+    h.gross = gross;
+    _syncStatus(h);
+    _reconcileShots(h);
+    _touch();
+  }
+
+  function adjPlayerGross(playerId, hi, inc){
+    ensureScores(playerId);
+    var h = _sc.scores[playerId].holes[hi];
+    var par = getCourseHole(hi).par || 4;
+    if(h.gross === null){
+      h.gross = par; // start at par
+    }
+    h.gross = h.gross + inc;
+    if(h.gross < 1) h.gross = 1;
+    // Limit range: par-6 to par+12
+    var lo = Math.max(1, par - 6);
+    var hi2 = par + 12;
+    if(h.gross < lo) h.gross = lo;
+    if(h.gross > hi2) h.gross = hi2;
+    _syncStatus(h);
+    _reconcileShots(h);
+    _touch();
+  }
+
+  function clearPlayerHole(playerId, hi){
+    ensureScores(playerId);
+    var h = _sc.scores[playerId].holes[hi];
+    h.gross = null;
+    h.putts = null;
+    h.penalties = 0;
+    h.notes = '';
+    h.status = 'not_started';
+    h.shots = [];
+    _touch();
+  }
+
+  // ── Shot mutations ──
+
+  function setShotTag(playerId, hi, si, category, value){
+    var h = getPlayerHole(playerId, hi);
+    if(!h || !h.shots[si]) return;
+    var s = h.shots[si];
+    if(category === 'flags'){
+      if(!Array.isArray(s.flags)) s.flags = [];
+      var idx = s.flags.indexOf(value);
+      if(idx >= 0){
+        s.flags.splice(idx, 1); // toggle off
+      } else {
+        s.flags.push(value);    // toggle on
+      }
+      s.lastTag = s.flags.length > 0 ? 'flags' : null;
+    } else {
+      // Single-value categories: toggle same value off, or replace
+      if(s[category] === value){
+        s[category] = null;
+        s.lastTag = null;
+      } else {
+        s[category] = value;
+        s.lastTag = category;
+      }
+    }
+    _touch();
+  }
+
+  function setShotToPin(playerId, hi, si, distance){
+    var h = getPlayerHole(playerId, hi);
+    if(!h || !h.shots[si]) return;
+    h.shots[si].toPin = distance;
+    _touch();
+  }
+
+  function setShotNotes(playerId, hi, si, text){
+    var h = getPlayerHole(playerId, hi);
+    if(!h || !h.shots[si]) return;
+    h.shots[si].notes = text || '';
+    _touch();
+  }
+
+  // ── Hole-level field mutations ──
+
+  function setHolePutts(playerId, hi, putts){
+    var h = getPlayerHole(playerId, hi);
+    if(h) { h.putts = putts; _touch(); }
+  }
+
+  function setHolePenalties(playerId, hi, penalties){
+    var h = getPlayerHole(playerId, hi);
+    if(h) { h.penalties = penalties; _touch(); }
+  }
+
+  function setHoleStatus(playerId, hi, status){
+    var h = getPlayerHole(playerId, hi);
+    if(h) { h.status = status; _touch(); }
+  }
+
+  function setHoleNotes(playerId, hi, notes){
+    var h = getPlayerHole(playerId, hi);
+    if(h) { h.notes = notes || ''; _touch(); }
+  }
+
+  function setHoleNet(playerId, hi, net){
+    var h = getPlayerHole(playerId, hi);
+    if(h) { h.net = net; _touch(); }
+  }
+
+  // ── Internal shot reconciliation ──
+
+  /**
+   * Reconcile shots array after gross changes.
+   * shots.length is NOT forced to equal gross — incomplete records are allowed.
+   * Only extends (fills) up to gross if shots are fewer; never trims user data.
+   * Status sync is handled by _syncStatus() — this function only manages shots[].
+   */
+  function _reconcileShots(h){
+    var g = h.gross;
+    if(g === null || g < 1) return; // no gross → leave shots as-is
+    // Extend with defaults if fewer shots than gross (fill gaps)
+    while(h.shots.length < g){
+      var sn = h.shots.length + 1;
+      h.shots.push(defShot(sn));
+    }
+    // Normalize all shots
+    h.shots.forEach(function(s, idx){
+      if(!Array.isArray(s.flags)) s.flags = s.flags ? [s.flags] : [];
+      if(s.note !== undefined && s.notes === undefined){ s.notes = s.note || ''; delete s.note; }
+      if(s.shotNumber == null) s.shotNumber = idx + 1;
+    });
+  }
+
+  /**
+   * Auto-sync status based on gross value.
+   * Rules: gross null → not_started (unless picked_up); gross >= 1 → at least in_progress.
+   * Does NOT downgrade 'completed' or 'picked_up' — those require explicit setHoleStatus().
+   */
+  function _syncStatus(h){
+    if(h.gross === null || h.gross < 1){
+      // gross cleared: revert to not_started unless picked_up
+      if(h.status !== 'picked_up') h.status = 'not_started';
+    } else {
+      // gross set: promote not_started → in_progress
+      if(h.status === 'not_started') h.status = 'in_progress';
+    }
+  }
+
+  function _touch(){ _sc.meta.updatedAt = new Date().toISOString(); }
+
+  // ══════════════════════════════════════════
+  // DERIVED CALCULATIONS
+  // ══════════════════════════════════════════
+
+  function totalGross(playerId, start, end){
+    start = start || 0;
+    end = (end != null) ? end : holeCount();
+    var sum = 0;
+    for(var i = start; i < end; i++){
+      var g = getPlayerGross(playerId, i);
+      if(g !== null) sum += g;
+    }
+    return sum;
+  }
+
+  function totalDelta(playerId, start, end){
+    start = start || 0;
+    end = (end != null) ? end : holeCount();
+    var sum = 0;
+    for(var i = start; i < end; i++){
+      var d = getPlayerDelta(playerId, i);
+      if(d !== null) sum += d;
+    }
+    return sum;
+  }
+
+  /** Projected gross: played holes use actual, unplayed holes use par */
+  function projectedGross(playerId){
+    var sum = 0;
+    for(var i = 0; i < holeCount(); i++){
+      var g = getPlayerGross(playerId, i);
+      sum += (g !== null) ? g : (getCourseHole(i).par || 4);
+    }
+    return sum;
+  }
+
+  function playedCount(playerId, start, end){
+    start = start || 0;
+    end = (end != null) ? end : holeCount();
+    var c = 0;
+    for(var i = start; i < end; i++){
+      if(getPlayerGross(playerId, i) !== null) c++;
+    }
+    return c;
+  }
+
+  // ══════════════════════════════════════════
+  // PLAYER MANAGEMENT
+  // ══════════════════════════════════════════
+
+  /** Sync order field to match array index (array is the single truth for ordering) */
+  function _reindex(){
+    _sc.players.forEach(function(p, i){ p.order = i; });
+  }
+
+  function addPlayer(id, name, order){
+    var p = defPlayer(id, name, order != null ? order : _sc.players.length);
+    _sc.players.push(p);
+    _reindex();
+    ensureScores(id);
+    _touch();
+    return p;
+  }
+
+  function removePlayer(id){
+    _sc.players = _sc.players.filter(function(p){ return p.id !== id; });
+    _reindex();
+    delete _sc.scores[id];
+    _touch();
+  }
+
+  function getPlayer(id){
+    return _sc.players.find(function(p){ return p.id === id; }) || null;
+  }
+
+  // ══════════════════════════════════════════
+  // PERSISTENCE
+  // ══════════════════════════════════════════
+
+  function save(){
+    try {
+      localStorage.setItem(LS_SC, JSON.stringify(_sc));
+      var wsForStorage = Object.assign({}, _ws, {userBg:null});
+      localStorage.setItem(LS_WS, JSON.stringify(wsForStorage));
+      if(_ws.userBg){
+        try { localStorage.setItem(LS_BG, _ws.userBg); } catch(e){}
+      } else {
+        localStorage.removeItem(LS_BG);
+      }
+    } catch(e){ console.warn('[D] save error', e); }
+  }
+
+  function load(){
+    // Priority 1: try v4 format
+    var rawSc = localStorage.getItem(LS_SC);
+    if(rawSc){
+      try {
+        _sc = JSON.parse(rawSc);
+        var rawWs = localStorage.getItem(LS_WS);
+        _ws = rawWs ? Object.assign(defWorkspace(), JSON.parse(rawWs)) : defWorkspace();
+        _ws.userBg = localStorage.getItem(LS_BG) || null;
+        _postLoad();
+        console.log('[D] loaded v4 data');
+        return 'v4';
+      } catch(e){ console.warn('[D] v4 load error, trying v531', e); }
+    }
+    // Priority 2: migrate from v531
+    var rawOld = localStorage.getItem(LS_OLD);
+    if(rawOld){
+      try {
+        var oldS = JSON.parse(rawOld);
+        var result = migrateV531(oldS);
+        _sc = result.scorecard;
+        _ws = result.workspace;
+        _ws.userBg = localStorage.getItem(LS_BG) || null;
+        _postLoad();
+        console.log('[D] migrated from v531 to v4');
+        // Save in v4 format immediately
+        save();
+        return 'migrated';
+      } catch(e){ console.warn('[D] v531 migration error', e); }
+    }
+    // Priority 3: fresh start
+    init();
+    return 'fresh';
+  }
+
+  function _postLoad(){
+    // Structural integrity
+    if(!_sc.version) _sc.version = '4.0';
+    if(!_sc.course) _sc.course = defScorecard().course;
+    if(!_sc.scores) _sc.scores = {};
+    if(!_sc.players) _sc.players = [];
+    if(!_sc.meta) _sc.meta = { createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+    // Migrate: rename old course.holes → course.holeSnapshot
+    if(_sc.course.holes && !_sc.course.holeSnapshot){
+      _sc.course.holeSnapshot = _sc.course.holes;
+      delete _sc.course.holes;
+    }
+    // Ensure course holeSnapshot array
+    if(!Array.isArray(_sc.course.holeSnapshot)) _sc.course.holeSnapshot = [];
+    var hc = _sc.course.holeCount || 18;
+    while(_sc.course.holeSnapshot.length < hc) _sc.course.holeSnapshot.push(defCourseHole(_sc.course.holeSnapshot.length));
+    // Ensure player scores match hole count
+    for(var pid in _sc.scores) ensureScores(pid);
+    // Normalize all shots (flags array, notes, shotNumber)
+    for(var pid2 in _sc.scores){
+      _sc.scores[pid2].holes.forEach(function(h){
+        (h.shots || []).forEach(function(s, idx){
+          if(!Array.isArray(s.flags)) s.flags = s.flags ? [s.flags] : [];
+          if(s.note !== undefined){ s.notes = s.notes || s.note || ''; delete s.note; }
+          if(s.notes === undefined) s.notes = '';
+          if(s.shotNumber == null) s.shotNumber = idx + 1;
+        });
+        // Ensure hole fields
+        if(h.putts === undefined) h.putts = null;
+        if(h.penalties === undefined) h.penalties = 0;
+        if(h.notes === undefined) h.notes = '';
+        if(h.net === undefined) h.net = null;
+        if(!h.status) h.status = (h.gross !== null) ? 'completed' : 'not_started';
+      });
+    }
+    // Ensure player records have v4 fields + reindex order to match array position
+    _sc.players.forEach(function(p, i){
+      p.order = i; // array index is the single truth for ordering
+      if(p.nickname === undefined) p.nickname = '';
+      if(p.team === undefined) p.team = '';
+      if(p.color === undefined) p.color = '';
+      if(p.handicapIndex === undefined) p.handicapIndex = null;
+      if(p.courseHandicap === undefined) p.courseHandicap = null;
+      if(p.notes === undefined) p.notes = '';
+    });
+    // Workspace integrity
+    if(!_ws.overlayPos || typeof _ws.overlayPos['16:9'] !== 'object')
+      _ws.overlayPos = defWorkspace().overlayPos;
+    if(!_ws.scorecardPos || typeof _ws.scorecardPos['16:9'] !== 'object')
+      _ws.scorecardPos = defWorkspace().scorecardPos;
+    ['16:9','9:16','1:1'].forEach(function(r){
+      if(!_ws.scorecardPos[r]) _ws.scorecardPos[r] = defWorkspace().scorecardPos[r];
+      else if(_ws.scorecardPos[r].y > 0.92) _ws.scorecardPos[r].y = 0.82;
+    });
+    // Ensure current player scores exist
+    ensureScores(pid());
+  }
+
+  // ══════════════════════════════════════════
+  // MIGRATION: v531 → v4
+  // ══════════════════════════════════════════
+
+  function migrateV531(oldS){
+    var sc = defScorecard();
+    var ws = defWorkspace();
+    var hc = (oldS.holes && oldS.holes.length) || 18;
+
+    // ── Course snapshot ──
+    sc.course.holeCount = hc;
+    sc.course.courseName = oldS.courseName || '';
+    sc.course.selectedTee = oldS.selectedTee || 'blue';
+    if(oldS.activeRound){
+      sc.course.clubId = oldS.activeRound.clubId || null;
+      sc.course.clubName = oldS.activeRound.clubName || '';
+      sc.course.routingId = oldS.activeRound.routingId || null;
+      sc.course.routingName = oldS.activeRound.routingName || '';
+      sc.course.routingSourceType = oldS.activeRound.routingSourceType || null;
+      sc.course.routingMeta = oldS.activeRound.routingMeta || {};
+    }
+    sc.course.holeSnapshot = Array.from({length:hc}, function(_,i){
+      var oh = (oldS.holes && oldS.holes[i]) || {};
+      return {
+        number: i + 1,
+        par: (oh.par != null) ? oh.par : 4,
+        yards: oh.holeLengthYds || null,
+        holeId: (oldS.activeRound && oldS.activeRound._routing &&
+                 oldS.activeRound._routing.holeRefs &&
+                 oldS.activeRound._routing.holeRefs[i]) || null
+      };
+    });
+
+    // ── Players ──
+    sc.players = (oldS.players || []).map(function(p, i){
+      return defPlayer(p.id, p.name, i);
+    });
+
+    // ── Scores: delta → gross ──
+    var activePid = oldS.currentPlayerId || SESSION;
+    var byPlayer = oldS.byPlayer ? JSON.parse(JSON.stringify(oldS.byPlayer)) : {};
+
+    // Capture active player's live data
+    if(!byPlayer[activePid]){
+      byPlayer[activePid] = {
+        holes: (oldS.holes || []).map(function(h){
+          return {
+            delta: h.delta,
+            shots: JSON.parse(JSON.stringify(h.shots || [])),
+            shotIndex: h.shotIndex || 0,
+            manualTypes: h.manualTypes || {},
+            toPins: h.toPins || {}
+          };
+        })
+      };
+    }
+
+    for(var playerId in byPlayer){
+      var oldHoles = byPlayer[playerId].holes || [];
+      sc.scores[playerId] = {
+        holes: Array.from({length:hc}, function(_,i){
+          var oh = oldHoles[i] || {};
+          var par = sc.course.holeSnapshot[i].par;
+          var gross = (oh.delta !== null && oh.delta !== undefined) ? par + oh.delta : null;
+
+          // Migrate shots
+          var oldShots = oh.shots || [];
+          var shots = oldShots.map(function(s, si){
+            var rawFlags = s.flags || s.manualCustomStatus || null;
+            return {
+              shotNumber: si + 1,
+              type:    s.type    || s.manualShotType    || null,
+              purpose: s.purpose || s.manualResult       || null,
+              result:  s.result  || s.landing            || null,
+              flags:   rawFlags ? [rawFlags] : [],
+              notes:   s.note    || s.notes || '',
+              lastTag: s.lastTag || null,
+              toPin:   (si === 0) ? (sc.course.holeSnapshot[i].yards || null) : ((oh.toPins && oh.toPins[si]) || null)
+            };
+          });
+
+          return {
+            gross: gross,
+            net: null,
+            putts: null,
+            penalties: 0,
+            notes: '',
+            status: (gross !== null) ? 'completed' : 'not_started',
+            shots: shots
+          };
+        }),
+        totals: {}
+      };
+    }
+
+    // ── Workspace ──
+    ws.currentHole       = oldS.currentHole || 0;
+    ws.currentPlayerId   = oldS.currentPlayerId || null;
+    ws.shotIndex         = (oldS.holes && oldS.holes[oldS.currentHole]) ? (oldS.holes[oldS.currentHole].shotIndex || -1) : -1;
+    ws.scorecardSummary  = oldS.scorecardSummary || null;
+    ws.displayMode       = oldS.displayMode || 'topar';
+    ws.ratio             = oldS.ratio || '16:9';
+    ws.exportRes         = oldS.exportRes || 2160;
+    ws.bgOpacity         = (oldS.bgOpacity != null) ? oldS.bgOpacity : 1.0;
+    ws.overlayOpacity    = (oldS.overlayOpacity != null) ? oldS.overlayOpacity : 1.0;
+    ws.showShot          = (oldS.showShot != null) ? oldS.showShot : true;
+    ws.showScore         = (oldS.showScore != null) ? oldS.showScore : true;
+    ws.showTotal         = (oldS.showTotal != null) ? oldS.showTotal : true;
+    ws.showDist          = (oldS.showDist != null) ? oldS.showDist : false;
+    ws.showPlayerName    = (oldS.showPlayerName != null) ? oldS.showPlayerName : true;
+    ws.safeZone          = (oldS.safeZone != null) ? oldS.safeZone : false;
+    ws.szSize            = oldS.szSize || '10';
+    ws.scoreRange        = oldS.scoreRange || '18';
+    ws.lang              = oldS.lang || 'en';
+    ws.theme             = oldS.theme || 'classic';
+    ws.uiTheme           = oldS.uiTheme || 'auto';
+    ws.overlayPos        = oldS.overlayPos || defWorkspace().overlayPos;
+    ws.scorecardPos      = oldS.scorecardPos || defWorkspace().scorecardPos;
+    ws.playerHistory     = oldS.playerHistory || [];
+    ws.recentPlayerIds   = oldS.recentPlayerIds || [];
+    ws.focusSlots        = oldS.focusSlots || [];
+    ws.playerName        = oldS.playerName || 'PLAYER';
+
+    return { scorecard:sc, workspace:ws };
+  }
+
+  // ══════════════════════════════════════════
+  // LEGACY COMPATIBILITY: rebuild S object
+  // ══════════════════════════════════════════
+  // ⚠️ TRANSITIONAL — syncS / syncFromS 是 v4 数据层与遗留 S 全局对象之间的桥接层。
+  //
+  // 存在原因: 现有 canvas 渲染、UI 构建、导出等代码仍直接读写 S 对象。
+  //           在全部迁移到 D API 之前，需要双向同步保持一致。
+  //
+  // 迁移路径:
+  //   Phase 1 (当前) — 所有 mutation 走 D API，syncS 重建 S 供读取
+  //   Phase 2 — 渲染/UI 代码逐步改为直接读 D.sc() / D.ws()
+  //   Phase 3 — syncS / syncFromS 可安全删除，S 对象退役
+  //
+  // 目标: 完成 Phase 3 后移除本节全部代码。
+
+  /**
+   * [TRANSITIONAL] Rebuild the legacy S object from v4 data.
+   * S.holes[] contains the CURRENT player's data with par from course snapshot.
+   * Workspace properties are copied from _ws.
+   * S.byPlayer is rebuilt for non-current player delta access.
+   */
+  function syncS(S){
+    var playerId = pid();
+    ensureScores(playerId);
+    var hc = holeCount();
+
+    // Rebuild S.holes for current player
+    S.holes = Array.from({length:hc}, function(_,i){
+      var ch = getCourseHole(i);
+      var ph = _sc.scores[playerId].holes[i] || defPlayerHole();
+      var delta = (ph.gross !== null) ? (ph.gross - (ch.par || 0)) : null;
+      // Build legacy toPins map from shots
+      var toPins = {};
+      (ph.shots || []).forEach(function(s, si){
+        if(s.toPin != null) toPins[si] = s.toPin;
+      });
+      return {
+        par: ch.par,
+        holeLengthYds: ch.yards,
+        delta: delta,
+        shots: ph.shots || [],       // direct reference — mutations go to v4 data
+        shotIndex: (i === _ws.currentHole) ? _ws.shotIndex : -1,
+        manualTypes: {},              // deprecated, kept for compat
+        toPins: toPins,
+        isPlaceholder: (ch.par == null)
+      };
+    });
+
+    // Copy workspace state
+    S.currentHole       = _ws.currentHole;
+    S.displayMode       = _ws.displayMode;
+    S.ratio             = _ws.ratio;
+    S.exportRes         = _ws.exportRes;
+    S.bgOpacity         = _ws.bgOpacity;
+    S.overlayOpacity    = _ws.overlayOpacity;
+    S.showShot          = _ws.showShot;
+    S.showScore         = _ws.showScore;
+    S.showTotal         = _ws.showTotal;
+    S.showDist          = _ws.showDist;
+    S.showPlayerName    = _ws.showPlayerName;
+    S.safeZone          = _ws.safeZone;
+    S.szSize            = _ws.szSize;
+    S.scoreRange        = _ws.scoreRange;
+    S.scorecardSummary  = _ws.scorecardSummary;
+    S.lang              = _ws.lang;
+    S.theme             = _ws.theme;
+    S.uiTheme           = _ws.uiTheme;
+    S.overlayPos        = _ws.overlayPos;
+    S.scorecardPos      = _ws.scorecardPos;
+    S.userBg            = _ws.userBg;
+    S.playerHistory     = _ws.playerHistory;
+    S.recentPlayerIds   = _ws.recentPlayerIds;
+    S.focusSlots        = _ws.focusSlots;
+    S.playerName        = _ws.playerName;
+    S.selectedTee       = _sc.course.selectedTee;
+    S.courseName        = _sc.course.courseName;
+
+    // Player data
+    S.players           = _sc.players;
+    S.currentPlayerId   = _ws.currentPlayerId;
+
+    // byPlayer compat: build delta-based view for all players
+    S.byPlayer = {};
+    for(var bpId in _sc.scores){
+      S.byPlayer[bpId] = {
+        holes: _sc.scores[bpId].holes.map(function(ph, i){
+          var ch = getCourseHole(i);
+          var delta = (ph.gross !== null) ? (ph.gross - (ch.par || 0)) : null;
+          var toPins = {};
+          (ph.shots || []).forEach(function(s, si){
+            if(s.toPin != null) toPins[si] = s.toPin;
+          });
+          return {
+            delta: delta,
+            shots: ph.shots || [],
+            shotIndex: -1,
+            manualTypes: {},
+            toPins: toPins
+          };
+        })
+      };
+    }
+
+    // activeRound compat
+    if(_sc.course.clubId){
+      S.activeRound = {
+        clubId:           _sc.course.clubId,
+        clubName:         _sc.course.clubName,
+        routingId:        _sc.course.routingId,
+        routingName:      _sc.course.routingName,
+        routingSourceType:_sc.course.routingSourceType,
+        routingMeta:      _sc.course.routingMeta,
+        _routing:         S._activeRouting || null
+      };
+    } else {
+      S.activeRound = null;
+    }
+  }
+
+  /**
+   * [TRANSITIONAL] Sync workspace state from S back to D (for code that writes S directly).
+   * Call before save() to capture any direct S mutations.
+   * Target: remove once all UI code writes D.ws() directly instead of S.
+   */
+  function syncFromS(S){
+    _ws.currentHole      = S.currentHole;
+    _ws.currentPlayerId  = S.currentPlayerId;
+    _ws.displayMode      = S.displayMode;
+    _ws.ratio            = S.ratio;
+    _ws.exportRes        = S.exportRes;
+    _ws.bgOpacity        = S.bgOpacity;
+    _ws.overlayOpacity   = S.overlayOpacity;
+    _ws.showShot         = S.showShot;
+    _ws.showScore        = S.showScore;
+    _ws.showTotal        = S.showTotal;
+    _ws.showDist         = S.showDist;
+    _ws.showPlayerName   = S.showPlayerName;
+    _ws.safeZone         = S.safeZone;
+    _ws.szSize           = S.szSize;
+    _ws.scoreRange       = S.scoreRange;
+    _ws.scorecardSummary = S.scorecardSummary;
+    _ws.lang             = S.lang;
+    _ws.theme            = S.theme;
+    _ws.uiTheme          = S.uiTheme;
+    _ws.overlayPos       = S.overlayPos;
+    _ws.scorecardPos     = S.scorecardPos;
+    _ws.userBg           = S.userBg;
+    _ws.playerHistory    = S.playerHistory;
+    _ws.recentPlayerIds  = S.recentPlayerIds;
+    _ws.focusSlots       = S.focusSlots;
+    _ws.playerName       = S.playerName;
+    // shotIndex from current hole
+    if(S.holes && S.holes[S.currentHole]){
+      _ws.shotIndex = S.holes[S.currentHole].shotIndex;
+    }
+    // Course name
+    _sc.course.courseName  = S.courseName || '';
+    _sc.course.selectedTee = S.selectedTee || 'blue';
+  }
+
+  // ══════════════════════════════════════════
+  // EXPORT / IMPORT (scorecard only)
+  // ══════════════════════════════════════════
+
+  function exportScorecard(){ return JSON.stringify(_sc, null, 2); }
+  function importScorecard(json){
+    try { _sc = JSON.parse(json); _postLoad(); return true; }
+    catch(e){ console.warn('[D] import error', e); return false; }
+  }
+
+  // ══════════════════════════════════════════
+  // PUBLIC API
+  // ══════════════════════════════════════════
+
+  return {
+    // Init
+    init:init,
+    // Accessors
+    sc:sc, ws:ws, pid:pid,
+    // Course
+    getCourseHole:getCourseHole, setCourseHolePar:setCourseHolePar,
+    setCourseHoleYards:setCourseHoleYards, holeCount:holeCount, setHoleCount:setHoleCount,
+    // Player scores
+    ensureScores:ensureScores,
+    getPlayerHole:getPlayerHole, getPlayerGross:getPlayerGross,
+    getPlayerDelta:getPlayerDelta, getPlayerShots:getPlayerShots, getPlayerShot:getPlayerShot,
+    // Score mutations
+    setPlayerGross:setPlayerGross, adjPlayerGross:adjPlayerGross, clearPlayerHole:clearPlayerHole,
+    setShotTag:setShotTag, setShotToPin:setShotToPin, setShotNotes:setShotNotes,
+    // Hole-level mutations
+    setHolePutts:setHolePutts, setHolePenalties:setHolePenalties,
+    setHoleStatus:setHoleStatus, setHoleNotes:setHoleNotes, setHoleNet:setHoleNet,
+    // Derived
+    totalGross:totalGross, totalDelta:totalDelta,
+    projectedGross:projectedGross, playedCount:playedCount,
+    // Players
+    addPlayer:addPlayer, removePlayer:removePlayer, getPlayer:getPlayer,
+    // Persistence
+    save:save, load:load,
+    // Legacy compat
+    syncS:syncS, syncFromS:syncFromS,
+    migrateV531:migrateV531,
+    // Factories
+    defShot:defShot, defPlayerHole:defPlayerHole, defCourseHole:defCourseHole,
+    defPlayer:defPlayer, defScorecard:defScorecard, defWorkspace:defWorkspace,
+    // Export/Import
+    exportScorecard:exportScorecard, importScorecard:importScorecard,
+    // Constants
+    SESSION:SESSION
+  };
+
+})();

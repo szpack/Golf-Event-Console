@@ -117,6 +117,35 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 <!-- Claude: keep this section updated. Newest on top. -->
 
+### v12.0.2 — 2026-03-08
+- 明确 status↔gross 约束规则，mutation API 自动维护 status（`_syncStatus`）
+- 明确 `totals` 为派生缓存容器，不可存储 holes 无法派生的数据
+- 明确 `players[]` 数组索引为排序唯一真相，`order` 字段为冗余标记（`_reindex` 自动同步）
+- 明确 `userBg` 为运行时引用，workspace 持久化时始终为 null，背景图独立存储
+- 强化 syncS/syncFromS 过渡层注释，标注三阶段迁移路径
+
+### v12.0.1 — 2026-03-08
+- `course.holes` 重命名为 `course.holeSnapshot`，语义更明确
+- Hole 新增 `net` 字段（差点净杆），Shot 新增 `shotNumber` 字段
+- `scores[playerId]` 新增 `totals` 容器（预留未来统计）
+- 放宽 `shots.length` 不再强制等于 `gross`，允许不完整记录
+- 新增 hole 级 API：`setHolePutts / setHolePenalties / setHoleStatus / setHoleNotes / setHoleNet`
+- `syncS / syncFromS` 标注为过渡兼容层，未来将移除
+
+### v12.0.0 — 2026-03-08
+- **v4.0 数据架构升级**: 业务数据(scorecardData)与UI状态(workspaceState)完全分离
+- 新增 `js/data.js` 统一数据访问层(D API)，所有读写通过 D.* 接口
+- 成绩主数据从 delta(相对杆) 改为 gross(实际杆数)，delta 改为派生值
+- 消除双真值问题: 移除 saveCurrentPlayerData/loadPlayerData 交换机制，所有球员数据单一存储于 D.sc().scores
+- 球场信息(par/码数)独立为 course snapshot，不再嵌入每洞 score 对象
+- shotIndex 从 per-hole per-player 改为全局 workspaceState 属性
+- Shot.flags 从单值改为数组，支持一杆多标记
+- Shot.note 统一为 Shot.notes
+- 每洞新增 status(not_started/in_progress/completed/picked_up)、putts、penalties、notes 字段
+- Player 结构扩展: 新增 nickname/team/color/handicapIndex/courseHandicap/notes
+- localStorage 分离: golf_v4_scorecard + golf_v4_workspace，自动从 golf_v531 迁移
+- 旧版 golf_v531 数据保留不删除，支持安全回滚
+
 ### v11.5.3 — 2026-03-08
 - 修复Canvas击球信息版恢复为只显示lastTag（最后一次点击的标签）
 - 批量导出每杆击球时，为每个已设标签单独导出一帧PNG（如type=APPROACH+result=TREES→导出2张）

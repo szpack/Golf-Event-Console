@@ -126,23 +126,25 @@ function getHolePuttCount(h){
   return count;
 }
 
-// Get effective values for a shot (v11.4 — 5 independent categories)
+// Get effective values for a shot (v4.0 — flags is array, notes preferred)
 function getEffectiveShot(h, idx){
   const s=h.shots[idx]||{};
-  // Migrate legacy field names if present
-  const type    = s.type    || s.manualShotType      || null;
-  const purpose = s.purpose || s.manualResult         || null;
-  const result  = s.result  || s.landing              || null;
-  const flags   = s.flags   || s.manualCustomStatus   || null;
-  const note    = s.note    || null;
-  const lastTag = s.lastTag || (flags?'flags':purpose?'purpose':result?'result':type?'type':null);
-  return { type, purpose, result, flags, note, lastTag };
+  const type    = s.type    || null;
+  const purpose = s.purpose || null;
+  const result  = s.result  || null;
+  const flags   = Array.isArray(s.flags) ? s.flags : (s.flags ? [s.flags] : []);
+  const notes   = s.notes || s.note || '';
+  const lastTag = s.lastTag || (flags.length?'flags':purpose?'purpose':result?'result':type?'type':null);
+  return { type, purpose, result, flags, notes, lastTag };
 }
 
 // Display label for canvas: show only the lastTag value
 function shotLastTagLabel(h, idx){
   const eff=getEffectiveShot(h, idx);
   if(!eff.lastTag) return '';
+  if(eff.lastTag==='flags'){
+    return eff.flags.length ? eff.flags.map(f=>shotTypeLabel(f)).join(' · ') : '';
+  }
   const val=eff[eff.lastTag];
   if(!val) return '';
   return shotTypeLabel(val);
@@ -155,7 +157,7 @@ function shotAllTagsLabel(h, idx){
   if(eff.type)    parts.push(shotTypeLabel(eff.type));
   if(eff.purpose) parts.push(shotTypeLabel(eff.purpose));
   if(eff.result)  parts.push(shotTypeLabel(eff.result));
-  if(eff.flags)   parts.push(shotTypeLabel(eff.flags));
+  eff.flags.forEach(f => parts.push(shotTypeLabel(f)));
   return parts.join('  ·  ');
 }
 

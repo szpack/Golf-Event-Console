@@ -19,42 +19,21 @@ function autoType(h,idx){
 
 // ── PLAYER AREA ──
 function getPlayerHoleDelta(pid,holeIdx){
-  if(pid===effectivePlayerId()) return S.holes[holeIdx].delta;
-  const pd=S.byPlayer[pid];
-  if(pd&&pd.holes&&pd.holes[holeIdx]) return pd.holes[holeIdx].delta;
-  return null;
+  return D.getPlayerDelta(pid,holeIdx);
 }
 function setPlayerHoleDelta(pid,holeIdx,delta){
-  if(pid===effectivePlayerId()){
-    S.holes[holeIdx].delta=delta;
-    S.holes[holeIdx].manualTypes={};
-    reconcileShots(S.holes[holeIdx]);
-    const g=getGross(S.holes[holeIdx]);
-    if(g&&g>0) S.holes[holeIdx].shotIndex=g-1;
+  if(delta===null){
+    D.clearPlayerHole(pid,holeIdx);
   } else {
-    const pd=S.byPlayer[pid];
-    if(pd&&pd.holes&&pd.holes[holeIdx]){
-      pd.holes[holeIdx].delta=delta;
-      pd.holes[holeIdx].manualTypes={};
-      const par=safePar(S.holes[holeIdx]);
-      const g=delta!==null?par+delta:null;
-      if(g&&g>0){
-        pd.holes[holeIdx].shots=Array.from({length:g},(_,i)=>pd.holes[holeIdx].shots?.[i]||{type:null});
-        pd.holes[holeIdx].shotIndex=g-1;
-      } else {
-        pd.holes[holeIdx].shots=[];
-        pd.holes[holeIdx].shotIndex=0;
-      }
-    }
+    var par=D.getCourseHole(holeIdx).par||4;
+    D.setPlayerGross(pid,holeIdx,par+delta);
   }
-  render(); scheduleSave();
+  D.syncS(S);
 }
 function adjPlayerDelta(pid,inc,holeOverride){
-  const hi=(holeOverride!==undefined)?holeOverride:S.currentHole;
-  let d=getPlayerHoleDelta(pid,hi);
-  if(d===null) d=0; else d=d+inc;
-  if(d<-2) d=-2; if(d>12) d=12;
-  setPlayerHoleDelta(pid,hi,d);
+  var hi=(holeOverride!==undefined)?holeOverride:S.currentHole;
+  D.adjPlayerGross(pid,hi,inc);
+  D.syncS(S);
 }
 function buildPlayerArea(){
   const grid=document.getElementById('player-btn-grid');
@@ -80,7 +59,7 @@ function buildPlayerArea(){
     nm.textContent=p.name;
     nm.title=p.name;
     nm.onclick=()=>{
-      if(p.id===effectivePlayerId()){ curHole().shotIndex=-1; render(); scheduleSave(); }
+      if(p.id===effectivePlayerId()){ curHole().shotIndex=-1; D.ws().shotIndex=-1; render(); scheduleSave(); }
       else switchToPlayer(p.id);
     };
     row.appendChild(nm);
@@ -333,7 +312,7 @@ function buildHoleNav(){
         resetAllShotIndex(holeIdx);
       }
       if(pid!==effectivePlayerId()) switchToPlayer(pid);
-      else { curHole().shotIndex=-1; render(); scheduleSave(); }
+      else { curHole().shotIndex=-1; D.ws().shotIndex=-1; render(); scheduleSave(); }
       trackRecentPlayer(pid);
     };
     if(delta===null){
@@ -371,7 +350,7 @@ function buildHoleNav(){
     // Label
     const lbl=cell(name,'sg-label sg-player'+(isCurrent?' sg-player-active':''));
     lbl.onclick=()=>{
-      if(pid===effectivePlayerId()){ curHole().shotIndex=-1; render(); scheduleSave(); }
+      if(pid===effectivePlayerId()){ curHole().shotIndex=-1; D.ws().shotIndex=-1; render(); scheduleSave(); }
       else switchToPlayer(pid);
     };
     grid.appendChild(lbl);
@@ -532,7 +511,7 @@ function buildTypeButtons(){
   if(flagCont){
     flagCont.innerHTML='';
     SP_FLAGS.forEach(item=>{
-      const btn=_mkSpBtn(item, eff.flags===item.type);
+      const btn=_mkSpBtn(item, Array.isArray(eff.flags)&&eff.flags.includes(item.type));
       btn.onclick=()=>setShotTag(item.type);
       flagCont.appendChild(btn);
     });
@@ -541,7 +520,7 @@ function buildTypeButtons(){
   // Note input
   const noteInp=document.getElementById('inp-shot-note');
   if(noteInp){
-    const note=(hasDelta&&!overviewMode)?(eff.note||''):'';
+    const note=(hasDelta&&!overviewMode)?(eff.notes||''):'';
     noteInp.value=note;
   }
 }
@@ -599,13 +578,13 @@ function buildShotButtons(){
         const g=getGross(hh);
         if(hh.delta!==null&&g&&num<=g){
           // 已有成绩且点击在完成杆范围内：仅导航，不改分
-          hh.shotIndex=num-1;
+          hh.shotIndex=num-1; D.ws().shotIndex=num-1;
         } else {
           // 无成绩 或 点击超出完成杆：设置/修改成绩
           hh.delta=num-safePar(hh);
           hh.manualTypes={};
           reconcileShots(hh);
-          hh.shotIndex=-1;
+          hh.shotIndex=-1; D.ws().shotIndex=-1;
         }
         render(); scheduleSave();
       };
@@ -684,7 +663,7 @@ function buildFocusPlayerBtns(){
     btn.textContent=p.name;
     btn.title=p.name;
     btn.onclick=()=>{
-      if(p.id===effectivePlayerId()){ curHole().shotIndex=-1; render(); scheduleSave(); }
+      if(p.id===effectivePlayerId()){ curHole().shotIndex=-1; D.ws().shotIndex=-1; render(); scheduleSave(); }
       else switchToPlayer(p.id);
     };
     cont.appendChild(btn);
@@ -1015,21 +994,35 @@ function closeNewRound(){ document.getElementById('newround-modal').style.displa
 function doNewRound(){
   if(document.getElementById('m-scores').checked){
     S.holes.forEach(h=>{h.delta=null;h.shots=[];h.shotIndex=0;h.manualTypes={};h.toPins={};});
-    // also clear all per-player byPlayer data
-    if(S.byPlayer){
-      Object.keys(S.byPlayer).forEach(pid=>{
-        if(S.byPlayer[pid]&&S.byPlayer[pid].holes)
-          S.byPlayer[pid].holes.forEach(h=>{h.delta=null;h.shots=[];h.shotIndex=0;h.manualTypes={};h.toPins={};});
+    D.ws().shotIndex=-1;
+    // also clear all per-player score data via D.sc()
+    if(typeof D!=='undefined'&&D.sc){
+      const scores=D.sc().scores;
+      Object.keys(scores).forEach(pid=>{
+        if(scores[pid]&&scores[pid].holes)
+          scores[pid].holes.forEach(h=>{h.gross=null;h.putts=null;h.penalties=0;h.notes='';h.status='not_started';h.shots=[];});
       });
     }
   }
-  if(document.getElementById('m-pars').checked)
+  if(document.getElementById('m-pars').checked){
     S.holes.forEach(h=>{h.par=4;h.isPlaceholder=false;});
+    if(typeof D!=='undefined'&&D.sc) D.sc().course.holeSnapshot.forEach(ch=>{ch.par=4;});
+  }
   // Clear active round (back to manual mode)
   if(typeof RoundManager!=='undefined') RoundManager.clearRound();
   S.activeRound=null;
+  // Clear course association in D
+  if(typeof D!=='undefined'&&D.sc){
+    D.sc().course.clubId=null; D.sc().course.routingId=null;
+  }
   // Clear all players so user can re-select for new round
   S.players=[]; S.currentPlayerId=null; S.byPlayer={};
+  if(typeof D!=='undefined'&&D.ws){
+    D.ws().currentPlayerId=null;
+    D.sc().players=[];
+    D.sc().scores={};
+  }
+  D.syncS(S);
   if(typeof buildPlayerArea==='function') buildPlayerArea();
   closeNewRound(); render(); scheduleSave();
 }

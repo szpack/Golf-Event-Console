@@ -705,124 +705,61 @@ function applyLang(){
 }
 
 // ============================================================
-// DATA MODEL
+// DATA MODEL — v4.0
+// All business data lives in D (data.js). S is a legacy compatibility view.
 // ============================================================
 const DEFAULT_BG = './bkimg.jpeg';
-const LS_KEY = 'golf_v531';
-const SESSION_ID = '__session__';
+const LS_KEY = 'golf_v531';       // legacy key, kept for migration
+const SESSION_ID = D.SESSION;     // re-export for compat
 
 function defaultScorecardCenter(ratio){
-  // Default: horizontally centered in canvas, 83% down
   return { x:0.5, y:0.83, centered:true };
 }
 
-function defState(){
-  return{
-    playerName:'PLAYER', courseName:'', currentHole:0, displayMode:'topar',
-    ratio:'16:9', showShot:true, showScore:true, scoreRange:'18',
-    scorecardSummary:null,
-    showTotal:true, showDist:false, selectedTee:'blue',
-    exportRes:2160, bgOpacity:1.0, overlayOpacity:1.0,
-    safeZone:false, szSize:'10', lang:'en', theme:'classic',
-    userBg:null,
-    // multi-player
-    players:[], currentPlayerId:null, playerHistory:[], byPlayer:{}, recentPlayerIds:[], focusSlots:[],
-    showPlayerName:true,
-    uiTheme:'auto',
-    // right edge at 5% safe zone; x = 0.95 − (SHOT_W * ratioScale / baseW)
-    // 16:9: scale=1, x=0.95−490/1920=0.695; 9:16: scale=1.6, x=0.95−490*1.6/1920=0.542; 1:1: scale=1, x=0.695
-    overlayPos:{
-      '16:9':{x:0.695,y:0.05},
-      '9:16':{x:0.542,y:0.05},
-      '1:1': {x:0.695,y:0.05}
-    },
-    // centered horizontally; y = 0.95 − SC_height_fraction per ratio (bottom at 5% safe zone)
-    scorecardPos:{
-      '16:9':{x:0.5,y:0.76,centered:true},
-      '9:16':{x:0.5,y:0.89,centered:true},
-      '1:1': {x:0.5,y:0.84,centered:true}
-    },
-    holes:Array.from({length:18},()=>({par:4,holeLengthYds:null,delta:null,shots:[],shotIndex:0,manualTypes:{},toPins:{}}))
-  };
-}
-
-let S = defState();
+// S is a legacy view object, rebuilt from D via D.syncS(S)
+let S = {};
 
 // ============================================================
-// PLAYER MANAGEMENT
+// PLAYER MANAGEMENT — v4.0
+// All player data lives in D.sc().scores[pid]. No dual-truth swap.
 // ============================================================
-function effectivePlayerId(){ return S.currentPlayerId||SESSION_ID; }
+function effectivePlayerId(){ return D.pid(); }
 
-function ensurePlayerData(pid){
-  if(!S.byPlayer) S.byPlayer={};
-  const count=S.holes.length||18;
-  if(!S.byPlayer[pid]){
-    S.byPlayer[pid]={holes:Array.from({length:count},()=>({delta:null,shots:[],shotIndex:0,manualTypes:{},toPins:{}}))};
-  } else if(S.byPlayer[pid].holes.length!==count){
-    // Resize player holes to match current round
-    while(S.byPlayer[pid].holes.length<count) S.byPlayer[pid].holes.push({delta:null,shots:[],shotIndex:0,manualTypes:{},toPins:{}});
-    if(S.byPlayer[pid].holes.length>count) S.byPlayer[pid].holes.length=count;
-  }
-}
+function ensurePlayerData(pid){ D.ensureScores(pid); }
 
 function currentPlayerDisplayName(){
-  if(S.currentPlayerId){
-    const p=(S.players||[]).find(p=>p.id===S.currentPlayerId);
+  if(D.ws().currentPlayerId){
+    const p=D.getPlayer(D.ws().currentPlayerId);
     if(p) return p.name;
   }
-  return S.playerName||'PLAYER';
+  return D.ws().playerName||'PLAYER';
 }
 
 function resetAllShotIndex(hi){
-  S.holes[hi].shotIndex=-1;
-  if(S.byPlayer){
-    for(const pid in S.byPlayer){
-      const ph=S.byPlayer[pid].holes;
-      if(ph&&ph[hi]) ph[hi].shotIndex=-1;
-    }
-  }
+  // v4: shotIndex is global in workspace, just reset it
+  D.ws().shotIndex=-1;
+  D.syncS(S);
 }
 
-function saveCurrentPlayerData(){
-  const pid=effectivePlayerId();
-  ensurePlayerData(pid);
-  S.byPlayer[pid].holes=S.holes.map(h=>({
-    delta:h.delta,
-    shots:JSON.parse(JSON.stringify(h.shots||[])),
-    shotIndex:h.shotIndex||0,
-    manualTypes:Object.assign({},h.manualTypes||{}),
-    toPins:Object.assign({},h.toPins||{})
-  }));
-}
-
-function loadPlayerData(pid){
-  ensurePlayerData(pid);
-  const ph=S.byPlayer[pid].holes;
-  S.holes.forEach((h,i)=>{
-    const p=ph[i]||{};
-    h.delta=p.delta!==undefined?p.delta:null;
-    h.shots=JSON.parse(JSON.stringify(p.shots||[]));
-    h.shotIndex=p.shotIndex||0;
-    h.manualTypes=Object.assign({},p.manualTypes||{});
-    h.toPins=Object.assign({},p.toPins||{});
-  });
-}
+// Legacy compat stubs — no longer needed in v4 (single truth in D)
+function saveCurrentPlayerData(){ /* no-op: v4 single truth */ }
+function loadPlayerData(pid){ D.syncS(S); /* just refresh S view */ }
 
 function trackRecentPlayer(pid){
   if(!pid||pid===SESSION_ID) return;
-  if(!S.recentPlayerIds) S.recentPlayerIds=[];
-  S.recentPlayerIds=[pid,...S.recentPlayerIds.filter(id=>id!==pid)].slice(0,8);
+  const ws=D.ws();
+  if(!ws.recentPlayerIds) ws.recentPlayerIds=[];
+  ws.recentPlayerIds=[pid,...ws.recentPlayerIds.filter(id=>id!==pid)].slice(0,8);
 }
 
 function switchToPlayer(pid){
   if(pid===effectivePlayerId()) return;
-  saveCurrentPlayerData();
-  S.currentPlayerId=(pid===SESSION_ID)?null:pid;
-  loadPlayerData(effectivePlayerId());
+  const ws=D.ws();
+  ws.currentPlayerId=(pid===SESSION_ID)?null:pid;
+  ws.shotIndex=-1; // reset to overview
   trackRecentPlayer(pid);
   clearReady();
-  // Reset to overview mode so canvas shows result + total badge
-  curHole().shotIndex=-1;
+  D.syncS(S);
   if(typeof buildPlayerArea==='function') buildPlayerArea();
   if(typeof buildFocusPlayerBtns==='function') buildFocusPlayerBtns();
   render(); scheduleSave();
@@ -831,143 +768,113 @@ function switchToPlayer(pid){
 function addPlayer(name){
   name=(name||'').trim();
   if(!name) return false;
-  if(!S.players) S.players=[];
-  if(S.players.length>=150){ miniToast(T('maxPlayers'),true); return false; }
-  if(S.players.find(p=>p.name===name)){ miniToast(T('playerExists'),true); return false; }
+  const players=D.sc().players;
+  if(players.length>=150){ miniToast(T('maxPlayers'),true); return false; }
+  if(players.find(p=>p.name===name)){ miniToast(T('playerExists'),true); return false; }
   const id='p_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
-  const isFirst=S.players.length===0;
-  S.players.push({id,name});
-  if(!S.playerHistory) S.playerHistory=[];
-  S.playerHistory=[name,...S.playerHistory.filter(n=>n!==name)].slice(0,50);
+  const isFirst=players.length===0;
+  D.addPlayer(id, name);
+  const ws=D.ws();
+  if(!ws.playerHistory) ws.playerHistory=[];
+  ws.playerHistory=[name,...ws.playerHistory.filter(n=>n!==name)].slice(0,50);
   if(isFirst){
-    // migrate current session data to this player
-    ensurePlayerData(id);
-    S.byPlayer[id].holes=S.holes.map(h=>({
-      delta:h.delta,shots:JSON.parse(JSON.stringify(h.shots||[])),
-      shotIndex:h.shotIndex||0,manualTypes:Object.assign({},h.manualTypes||{}),
-      toPins:Object.assign({},h.toPins||{})
-    }));
-    if(S.byPlayer[SESSION_ID]) delete S.byPlayer[SESSION_ID];
-    S.currentPlayerId=id;
-    // S.holes already has the right data
-  } else {
-    ensurePlayerData(id);
+    // Migrate session data to this player
+    const sessionScores=D.sc().scores[SESSION_ID];
+    if(sessionScores){
+      D.sc().scores[id]=JSON.parse(JSON.stringify(sessionScores));
+      delete D.sc().scores[SESSION_ID];
+    }
+    ws.currentPlayerId=id;
   }
+  D.syncS(S);
   scheduleSave();
   return true;
 }
 
 function removePlayer(id){
-  if(!S.players) return;
-  saveCurrentPlayerData();
-  S.players=S.players.filter(p=>p.id!==id);
-  if(S.byPlayer) delete S.byPlayer[id];
-  if(S.currentPlayerId===id){
-    S.currentPlayerId=S.players.length>0?S.players[0].id:null;
-    loadPlayerData(effectivePlayerId());
+  D.removePlayer(id);
+  const ws=D.ws();
+  if(ws.currentPlayerId===id){
+    ws.currentPlayerId=D.sc().players.length>0?D.sc().players[0].id:null;
   }
+  D.syncS(S);
   if(typeof buildPlayerArea==='function') buildPlayerArea();
   render(); scheduleSave();
 }
 
 // ============================================================
-// PERSISTENCE
+// PERSISTENCE — v4.0
+// Business data in D.sc(), workspace in D.ws(), S is rebuilt view
 // ============================================================
 let saveTimer;
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(doSave,350); }
 function doSave(){
   try{
-    // Sync current player's live S.holes back to byPlayer before saving
-    saveCurrentPlayerData();
-    // Sync round manager state back to S.activeRound
+    // Sync any direct S mutations back to D
+    D.syncFromS(S);
+    // Sync round manager state to course snapshot
     const rm=typeof RoundManager!=='undefined'?RoundManager.getRound():null;
-    if(rm) S.activeRound=JSON.parse(JSON.stringify(rm));
-    const forStorage={...S,userBg:null};
-    localStorage.setItem(LS_KEY,JSON.stringify(forStorage));
-    if(S.userBg){
-      try{ localStorage.setItem(LS_KEY+'_bg',S.userBg); } catch(e){}
-    } else {
-      localStorage.removeItem(LS_KEY+'_bg');
+    if(rm){
+      const sc=D.sc();
+      sc.course.clubId=rm.clubId||null;
+      sc.course.clubName=rm.clubName||'';
+      sc.course.routingId=rm.routingId||null;
+      sc.course.routingName=rm.routingName||'';
+      sc.course.routingSourceType=rm.routingSourceType||null;
+      sc.course.routingMeta=rm.routingMeta||{};
     }
+    D.save();
   } catch(e){ console.warn('save error',e); }
 }
 
 function loadSaved(){
   try{
-    const raw=localStorage.getItem(LS_KEY);
-    if(!raw) return;
-    const saved=JSON.parse(raw);
-    S=Object.assign(defState(),saved);
-    if(!S.overlayPos||typeof S.overlayPos['16:9']!=='object') S.overlayPos=defState().overlayPos;
-    if(!S.scorecardPos||typeof S.scorecardPos['16:9']!=='object') S.scorecardPos=defState().scorecardPos;
-    // Ensure centered flag exists; clamp Y to prevent off-screen scorecard
-    ['16:9','9:16','1:1'].forEach(r=>{
-      if(S.scorecardPos[r]===undefined) S.scorecardPos[r]=defState().scorecardPos[r];
-      else if(S.scorecardPos[r].y>0.92) S.scorecardPos[r].y=0.82;
-    });
-    const holeCount=saved.holes?saved.holes.length:18;
-    S.holes=Array.from({length:holeCount},(_,i)=>Object.assign(
-      {par:4,holeLengthYds:null,delta:null,shots:[],shotIndex:0,manualTypes:{},toPins:{}},
-      saved.holes?.[i]||{}
-    ));
-    // multi-player fields
-    S.players=saved.players||[];
-    S.currentPlayerId=saved.currentPlayerId||null;
-    S.playerHistory=saved.playerHistory||[];
-    S.byPlayer=saved.byPlayer||{};
-    S.showPlayerName=!!saved.showPlayerName;
-    S.uiTheme=saved.uiTheme||'dark';
-    // backward-compat: old saves had per-hole data in holes[], no byPlayer
-    const pid=effectivePlayerId();
-    if(!saved.byPlayer){
-      ensurePlayerData(pid);
-      S.byPlayer[pid].holes=S.holes.map(h=>({
-        delta:h.delta,shots:JSON.parse(JSON.stringify(h.shots||[])),
-        shotIndex:h.shotIndex||0,manualTypes:Object.assign({},h.manualTypes||{}),
-        toPins:Object.assign({},h.toPins||{})
-      }));
-    }
-    loadPlayerData(pid);
-    LANG=S.lang||'en';
-    const bgData=localStorage.getItem(LS_KEY+'_bg');
-    S.userBg=bgData||null;
-    if(S.overlayOpacity===undefined) S.overlayOpacity=1.0;
-    if(S.bgOpacity===undefined||S.bgOpacity<0.01) S.bgOpacity=1.0;
-    if(S.exportRes===undefined) S.exportRes=2160;
-    if(!S.courseName) S.courseName='';
-    if(!S.theme) S.theme='classic';
+    const result=D.load();
+    LANG=D.ws().lang||'en';
+    D.syncS(S);
+    console.log('[app] loaded data:', result);
     // activeRound is restored later after CourseDatabase loads
   } catch(e){ console.warn('loadSaved error',e); }
 }
 
-/** Restore active round from S.activeRound after CourseDatabase is ready */
+/** Restore active round from course snapshot after CourseDatabase is ready */
 function restoreActiveRound(){
-  if(S.activeRound && S.activeRound.clubId && S.activeRound.routingId){
+  const cs=D.sc().course;
+  if(cs.clubId && cs.routingId){
+    // Build a legacy activeRound object for RoundManager.restoreRound()
+    const fakeRound={
+      clubId:cs.clubId, clubName:cs.clubName,
+      routingId:cs.routingId, routingName:cs.routingName,
+      routingSourceType:cs.routingSourceType, routingMeta:cs.routingMeta,
+      _routing:S._activeRouting||null
+    };
     try {
-      const restored = RoundManager.restoreRound(S.activeRound, S.selectedTee || 'blue');
+      const restored = RoundManager.restoreRound(fakeRound, cs.selectedTee || 'blue');
       if(restored){
-        // Sync par/yard from course DB into S.holes (DB may have been updated)
+        S._activeRouting=restored._routing; // cache for future restores
+        // Sync par/yard from course DB into course snapshot
         const oh = RoundManager.getOrderedHoles();
         if(oh){
-          S.holes.forEach((h,i)=>{
-            if(oh[i]){
-              // Only overwrite par if DB has real data (not placeholder)
-              if(oh[i].par != null) h.par = oh[i].par;
-              if(oh[i].yard != null) h.holeLengthYds = oh[i].yard;
-              h.isPlaceholder = (oh[i].par == null);
+          oh.forEach((hd,i)=>{
+            if(hd){
+              if(hd.par != null) D.setCourseHolePar(i, hd.par);
+              if(hd.yard != null) D.setCourseHoleYards(i, hd.yard);
             }
           });
         }
-        console.log('[init] restored round:', S.activeRound.routingName);
+        D.syncS(S);
+        console.log('[init] restored round:', cs.routingName);
         render();
       } else {
-        console.warn('[init] round restore returned null — clearing activeRound');
-        S.activeRound = null;
+        console.warn('[init] round restore returned null — clearing');
+        D.sc().course.clubId=null; D.sc().course.routingId=null;
+        D.syncS(S);
         miniToast('Round restore failed — manual mode', true);
       }
     } catch(e){
       console.warn('[init] failed to restore round:', e.message);
-      S.activeRound=null;
+      D.sc().course.clubId=null; D.sc().course.routingId=null;
+      D.syncS(S);
       miniToast('Round restore error — manual mode', true);
     }
   }
@@ -1056,6 +963,7 @@ function confirmCourseEdit(){
   const inp=document.getElementById('course-edit-input');
   const v=inp?inp.value.trim():'';
   S.courseName=v;
+  D.sc().course.courseName=v;
   const courseInp=document.getElementById('inp-course');
   if(courseInp) courseInp.value=v;
   updateCourseDisplay();
@@ -1087,61 +995,61 @@ function clearBg(){ S.userBg=null; applyBg(); scheduleSave(); closeSettings(); }
 // ============================================================
 // MUTATIONS
 // ============================================================
-function setPar(v){ const h=curHole(); h.par=v; h.isPlaceholder=false; reconcileShots(h); render(); scheduleSave(); }
+function setPar(v){
+  const hi=D.ws().currentHole;
+  D.setCourseHolePar(hi, v);
+  // Re-derive gross for current player if they have a score
+  const pid=D.pid();
+  const ph=D.getPlayerHole(pid, hi);
+  if(ph && ph.gross!==null){
+    // gross stays the same — par change only affects delta display
+  }
+  D.syncS(S);
+  render(); scheduleSave();
+}
 
 function setDelta(d){
-  const h=curHole();
-  h.delta=d; h.manualTypes={};
-  reconcileShots(h);
-  h.shotIndex=-1;
+  const hi=D.ws().currentHole;
+  const par=D.getCourseHole(hi).par||4;
+  D.setPlayerGross(D.pid(), hi, par+d);
+  D.ws().shotIndex=-1;
   clearReady();
+  D.syncS(S);
   render(); scheduleSave();
 }
 
 function adjDelta(inc){
-  const h=curHole();
-  if(h.delta===null){
-    h.delta=0;
-    reconcileShots(h);
-    const gross=getGross(h);
-    if(gross&&gross>0) h.shotIndex=gross-1; else h.shotIndex=0;
+  const pid=D.pid();
+  const hi=D.ws().currentHole;
+  const ph=D.getPlayerHole(pid, hi);
+  if(ph.gross===null){
+    const par=D.getCourseHole(hi).par||4;
+    D.setPlayerGross(pid, hi, par); // start at par
+    const g=D.getPlayerGross(pid, hi);
+    D.ws().shotIndex=(g&&g>0)?g-1:0;
   } else {
-    const newD=h.delta+inc;
-    if(newD<-6||newD>12) return;
-    h.delta=newD; h.manualTypes={};
-    reconcileShots(h);
-    const gross=getGross(h);
-    if(gross&&gross>0) h.shotIndex=gross-1; else h.shotIndex=0;
+    D.adjPlayerGross(pid, hi, inc);
+    const g=D.getPlayerGross(pid, hi);
+    D.ws().shotIndex=(g&&g>0)?g-1:0;
   }
+  D.syncS(S);
   render(); scheduleSave();
 }
 
+// Legacy compat — reconcileShots now handled internally by D
 function reconcileShots(h){
-  const gross=getGross(h);
-  if(gross===null){ h.shots=[]; h.shotIndex=0; return; }
-  // Trim or extend shots array
-  while(h.shots.length>gross) h.shots.pop();
-  while(h.shots.length<gross) h.shots.push({});
-  if(h.shotIndex>=gross) h.shotIndex=gross-1;
-  if(h.shotIndex<-1) h.shotIndex=-1;
-  // Migrate legacy field names to new model
-  h.shots.forEach(s=>{
-    if(s.manualShotType && !s.type)     { s.type=s.manualShotType; }
-    if(s.manualResult   && !s.purpose)  { s.purpose=s.manualResult; }
-    if(s.landing        && !s.result)   { s.result=s.landing; }
-    if(s.manualCustomStatus && !s.flags){ s.flags=s.manualCustomStatus; }
-    // Clean up legacy fields
-    delete s.manualShotType; delete s.manualResult; delete s.landing; delete s.manualCustomStatus;
-  });
+  // Delegate: find the player hole in D and reconcile
+  // This is called from some legacy paths; in v4, D handles reconciliation automatically
 }
 
 function clearHole(){
-  const h=curHole();
-  h.delta=null; h.shots=[]; h.shotIndex=0; h.manualTypes={}; h.toPins={};
+  D.clearPlayerHole(D.pid(), D.ws().currentHole);
+  D.ws().shotIndex=-1;
+  D.syncS(S);
   render(); scheduleSave();
 }
 
-function setMode(m){ S.displayMode=m; render(); scheduleSave(); }
+function setMode(m){ S.displayMode=m; D.ws().displayMode=m; render(); scheduleSave(); }
 
 function focusToPin(){
   // disabled — no longer auto-focus to pin input
@@ -1150,24 +1058,27 @@ function prevShot(){
   const h=curHole(), g=getGross(h);
   if(h.delta===null||!g) return;
   clearReady();
-  if(h.shotIndex<0) { h.shotIndex=g-1; }
-  else { h.shotIndex=h.shotIndex<=0?g-1:h.shotIndex-1; }
+  const ws=D.ws();
+  if(ws.shotIndex<0) { ws.shotIndex=g-1; }
+  else { ws.shotIndex=ws.shotIndex<=0?g-1:ws.shotIndex-1; }
+  D.syncS(S);
   render(); scheduleSave();
 }
 function nextShot(){
   const h=curHole(), g=getGross(h);
   if(h.delta===null||!g) return;
   clearReady();
-  if(h.shotIndex<0) { h.shotIndex=0; }
-  else { h.shotIndex=h.shotIndex>=g-1?0:h.shotIndex+1; }
+  const ws=D.ws();
+  if(ws.shotIndex<0) { ws.shotIndex=0; }
+  else { ws.shotIndex=ws.shotIndex>=g-1?0:ws.shotIndex+1; }
+  D.syncS(S);
   render(); scheduleSave();
 }
-/** Select first shot if none selected, used by keyboard handler.
- *  Returns: 'ready' if already selected, 'just_selected' if just picked first shot, false if no score */
 function ensureShotSelected(){
   const h=curHole(), g=getGross(h);
   if(h.delta===null||!g) return false;
-  if(h.shotIndex<0){ clearReady(); h.shotIndex=0; render(); scheduleSave(); return 'just_selected'; }
+  const ws=D.ws();
+  if(ws.shotIndex<0){ clearReady(); ws.shotIndex=0; D.syncS(S); render(); scheduleSave(); return 'just_selected'; }
   return 'ready';
 }
 
@@ -1192,15 +1103,12 @@ function switchToPrevPlayer(){
 }
 function setShotTag(type){
   const h=curHole();
-  if(h.delta===null||h.shotIndex<0) return;
+  const ws=D.ws();
+  if(h.delta===null||ws.shotIndex<0) return;
   clearReady();
-  const si=h.shotIndex;
-  if(!h.shots[si]) h.shots[si]={};
-  const s=h.shots[si];
-  const cat=getShotCategory(type); // 'type'|'purpose'|'result'|'flags'
-  // Toggle: same value → clear, different value → replace
-  if(s[cat]===type){ s[cat]=null; s.lastTag=null; }
-  else { s[cat]=type; s.lastTag=cat; }
+  const cat=getShotCategory(type);
+  D.setShotTag(D.pid(), ws.currentHole, ws.shotIndex, cat, type);
+  D.syncS(S);
   render(); scheduleSave();
 }
 // Legacy aliases
@@ -1215,11 +1123,12 @@ function getShotCategory(type){
 }
 
 function onShotNoteInput(val){
+  const ws=D.ws();
   const h=curHole();
-  if(h.delta===null||h.shotIndex<0) return;
+  if(h.delta===null||ws.shotIndex<0) return;
   clearReady();
-  if(!h.shots[h.shotIndex]) h.shots[h.shotIndex]={type:null};
-  h.shots[h.shotIndex].note=val||'';
+  D.setShotNotes(D.pid(), ws.currentHole, ws.shotIndex, val||'');
+  D.syncS(S);
   render(); scheduleSave();
 }
 
@@ -1229,65 +1138,72 @@ function getShotToPin(h,idx){
   return h.toPins?.[idx]??null;
 }
 function setShotToPin(val){
-  const h=curHole();
-  if(h.shotIndex<0||h.shotIndex===0){
-    // Overview mode or TEE Off: update shared hole length
-    h.holeLengthYds=val;
+  const ws=D.ws();
+  if(ws.shotIndex<0||ws.shotIndex===0){
+    // Overview mode or TEE Off: update course snapshot hole length
+    D.setCourseHoleYards(ws.currentHole, val);
+    D.syncS(S);
   } else {
-    if(!h.toPins) h.toPins={};
-    h.toPins[h.shotIndex]=val;
+    D.setShotToPin(D.pid(), ws.currentHole, ws.shotIndex, val);
+    D.syncS(S);
   }
   redrawOnly(); scheduleSave();
 }
 
 function resetAllPars(){
-  // If round from course DB is active, reset pars to course-defined values
   const oh=RoundManager.getRound()?RoundManager.getOrderedHoles():null;
-  S.holes.forEach((h,i)=>{ h.par=(oh&&oh[i]&&oh[i].par!=null)?oh[i].par:4; });
+  for(let i=0;i<D.holeCount();i++){
+    D.setCourseHolePar(i, (oh&&oh[i]&&oh[i].par!=null)?oh[i].par:4);
+  }
+  D.syncS(S);
   render(); scheduleSave(); closeSettings();
 }
 
 function gotoNextHole(){
-  const total=S.holes.length||18;
-  const next=(S.currentHole+1)%total;
-  S.currentHole=next;
-  S.scorecardSummary=null;
-  // Sync round manager if active
+  const total=D.holeCount();
+  const ws=D.ws();
+  const next=(ws.currentHole+1)%total;
+  ws.currentHole=next;
+  ws.scorecardSummary=null;
+  ws.shotIndex=-1;
   if(RoundManager.getRound()){
     const oh=RoundManager.getOrderedHoles();
     if(oh&&oh[next]) RoundManager.setCurrentHole(oh[next].holeId);
   }
-  resetAllShotIndex(next);
   clearReady();
+  D.syncS(S);
   render(); scheduleSave();
 }
 function gotoPrevHole(){
-  const total=S.holes.length||18;
-  const prev=(S.currentHole+total-1)%total;
-  S.currentHole=prev;
-  S.scorecardSummary=null;
+  const total=D.holeCount();
+  const ws=D.ws();
+  const prev=(ws.currentHole+total-1)%total;
+  ws.currentHole=prev;
+  ws.scorecardSummary=null;
+  ws.shotIndex=-1;
   if(RoundManager.getRound()){
     const oh=RoundManager.getOrderedHoles();
     if(oh&&oh[prev]) RoundManager.setCurrentHole(oh[prev].holeId);
   }
-  resetAllShotIndex(prev);
   clearReady();
+  D.syncS(S);
   render(); scheduleSave();
 }
 
 const RATIO_BG={'16:9':'./bkimg.jpeg','9:16':'./bkimg-9-16.jpg','1:1':'./bkimg-1-1.jpg'};
 
 function setRatio(r){
-  S.ratio=r;
+  S.ratio=r; D.ws().ratio=r;
   document.querySelectorAll('.ratio-btn').forEach(b=>b.classList.toggle('active',b.dataset.ratio===r));
-  // Switch default background if user has not uploaded a custom one
   if(!S.userBg){
     const bgEl=document.getElementById('bg-img');
     if(bgEl){ bgEl.src=RATIO_BG[r]||DEFAULT_BG; bgEl.style.display='block'; }
   }
-  // Reset overlay & scorecard positions to defaults for this ratio
-  S.overlayPos[r]=defState().overlayPos[r];
-  S.scorecardPos[r]=defState().scorecardPos[r];
+  const dw=D.defWorkspace();
+  S.overlayPos[r]=dw.overlayPos[r];
+  S.scorecardPos[r]=dw.scorecardPos[r];
+  D.ws().overlayPos[r]=dw.overlayPos[r];
+  D.ws().scorecardPos[r]=dw.scorecardPos[r];
   render(); scheduleSave();
 }
 
@@ -2409,7 +2325,7 @@ function drawShotOverlay(ctx,X,Y,scale){
     centerTxt=shotLastTagLabel(h,si);
     // Fallback to note if no tag label
     if(!centerTxt){
-      const shotNote=h.shots[si]?.note||'';
+      const shotNote=h.shots[si]?.notes||h.shots[si]?.note||'';
       if(shotNote) centerTxt=shotNote.toUpperCase();
     }
   }
@@ -2571,48 +2487,42 @@ function doExportScorecardOnly(){
 // ── Batch: current hole shot sequence → ZIP ──
 async function doExportHoleSequence(){
   if(typeof JSZip==='undefined'){ miniToast(T('jsZipNotLoaded'),true); return; }
-  const players=S.players||[];
+  const players=D.sc().players;
   if(players.length===0){ miniToast(T('addPlayersFirst'),true); return; }
-  // Collect players that have a score on this hole
-  const holeIdx=S.currentHole, holeNum=holeIdx+1;
-  const savedPid=S.currentPlayerId;
+  const holeIdx=D.ws().currentHole, holeNum=holeIdx+1;
+  const savedPid=D.ws().currentPlayerId;
+  const savedShotIndex=D.ws().shotIndex;
   const exportPlayers=[];
   for(const p of players){
-    const d=(p.id===effectivePlayerId())?S.holes[holeIdx].delta
-      :(S.byPlayer[p.id]?.holes?.[holeIdx]?.delta??null);
-    if(d!==null) exportPlayers.push(p);
+    if(D.getPlayerGross(p.id, holeIdx)!==null) exportPlayers.push(p);
   }
   if(exportPlayers.length===0){ miniToast(T('setScoreFirst'),true); return; }
 
   const{w,h:H}=expGetDims();
   const zip=new JSZip();
-  // totalSteps is approximate (can't know tag count per shot in advance)
   let totalSteps=1;
   exportPlayers.forEach(p=>{
-    const d=(p.id===effectivePlayerId())?S.holes[holeIdx].delta:(S.byPlayer[p.id].holes[holeIdx].delta);
-    totalSteps+=(safePar(S.holes[holeIdx])+d)*2+1; // rough estimate: avg 2 tags per shot + final
+    const g=D.getPlayerGross(p.id, holeIdx)||0;
+    totalSteps+=g*2+1;
   });
   let step=0;
 
   try{
     for(const p of exportPlayers){
-      // switch to this player
-      if(p.id!==effectivePlayerId()){
-        saveCurrentPlayerData();
-        S.currentPlayerId=p.id;
-        loadPlayerData(p.id);
-      }
+      // Switch to this player for rendering
+      D.ws().currentPlayerId=(p.id===D.SESSION)?null:p.id;
+      D.syncS(S);
       const h=S.holes[holeIdx];
       const gross=getGross(h);
       if(!gross||gross<=0) continue;
-      const savedIdx=h.shotIndex, savedMT=JSON.parse(JSON.stringify(h.manualTypes||{})), savedShots=JSON.parse(JSON.stringify(h.shots||[]));
       const pName=expTitleCase(expSanitize(p.name));
 
       for(let i=0;i<gross;i++){
-        h.shotIndex=i;
+        D.ws().shotIndex=i;
+        D.syncS(S);
         if(i===gross-1){
           const ft=expGetForType(h.delta);
-          if(!h.shots[i]) h.shots[i]={};
+          if(!h.shots[i]) h.shots[i]=D.defShot();
           if(!h.shots[i].purpose) { h.shots[i].purpose=ft; h.shots[i].lastTag='purpose'; }
         }
         const eff=getEffectiveShot(h,i);
@@ -2620,14 +2530,16 @@ async function doExportHoleSequence(){
         if(eff.type)    setTags.push({cat:'type',    val:eff.type});
         if(eff.purpose) setTags.push({cat:'purpose', val:eff.purpose});
         if(eff.result)  setTags.push({cat:'result',  val:eff.result});
-        if(eff.flags)   setTags.push({cat:'flags',   val:eff.flags});
+        // flags is now an array
+        if(eff.flags&&eff.flags.length) eff.flags.forEach(f=>setTags.push({cat:'flags',val:f}));
         if(setTags.length===0) setTags.push({cat:'type',val:'SHOT'});
         const savedLastTag=h.shots[i]?.lastTag;
         for(const tag of setTags){
-          if(!h.shots[i]) h.shots[i]={};
+          if(!h.shots[i]) h.shots[i]=D.defShot();
           h.shots[i].lastTag=tag.cat;
+          D.syncS(S);
           step++;
-          const tagStr=tag.val.replace(/ /g,'_').toUpperCase();
+          const tagStr=String(tag.val).replace(/ /g,'_').toUpperCase();
           expShowProgress(`${pName} S${i+1} ${tagStr}`,step/totalSteps);
           const canvas=expMakeShotCanvas(w,H);
           zip.file(`${pName}_${expHole(holeNum)}_S${String(i+1).padStart(2,'0')}_${expShotType(tagStr)}_${expResLabel()}.png`,await expCanvasToBlob(canvas));
@@ -2635,20 +2547,19 @@ async function doExportHoleSequence(){
         }
         if(h.shots[i]) h.shots[i].lastTag=savedLastTag;
       }
-      // FINAL frame: overview mode (shotIndex=-1 for result badge)
-      h.shotIndex=-1;
+      // FINAL frame: overview mode
+      D.ws().shotIndex=-1;
+      D.syncS(S);
       step++;
       expShowProgress(`${pName} Final`,step/totalSteps);
       const fcanvas=expMakeShotCanvas(w,H);
       const resultStr=deltaLabel(h.delta).replace(/\s+/g,'_').toUpperCase();
       zip.file(`${pName}_${expHole(holeNum)}_ZFinal_${resultStr}_${expResLabel()}.png`,await expCanvasToBlob(fcanvas));
-      // restore this player's state
-      h.shotIndex=savedIdx; h.manualTypes=savedMT; h.shots=JSON.parse(JSON.stringify(savedShots));
     }
-    // restore original player
-    saveCurrentPlayerData();
-    S.currentPlayerId=savedPid;
-    loadPlayerData(effectivePlayerId());
+    // Restore original player
+    D.ws().currentPlayerId=savedPid;
+    D.ws().shotIndex=savedShotIndex;
+    D.syncS(S);
 
     expShowProgress('Packaging ZIP…',0.97);
     const zblob=await zip.generateAsync({type:'blob'});
@@ -2659,8 +2570,8 @@ async function doExportHoleSequence(){
     miniToast(T('exportError')+': '+err.message,true);
     expHideProgress();
     // restore original player
-    S.currentPlayerId=savedPid;
-    loadPlayerData(effectivePlayerId());
+    D.ws().currentPlayerId=savedPid; S.currentPlayerId=savedPid;
+    D.syncS(S);
   } finally{
     redrawOnly();
     if(typeof buildPlayerArea==='function') buildPlayerArea();
@@ -2714,17 +2625,19 @@ async function doExportAll(){
   if(typeof JSZip==='undefined'){ miniToast(T('jsZipNotLoaded'),true); return; }
   const zip=new JSZip();
   const{w,h}=expGetDims();
-  const savedHole=S.currentHole, savedPid=S.currentPlayerId, savedSummary=S.scorecardSummary;
-  const players=(S.players&&S.players.length>0)?S.players:[{id:effectivePlayerId(),name:S.playerName||T('playerLbl')}];
-  const _expHoles=S.holes.length||18;
+  const ws=D.ws();
+  const savedHole=ws.currentHole, savedPid=ws.currentPlayerId, savedSummary=ws.scorecardSummary, savedSI=ws.shotIndex;
+  const players=(D.sc().players.length>0)?D.sc().players:[{id:effectivePlayerId(),name:ws.playerName||T('playerLbl')}];
+  const _expHoles=D.holeCount();
   const totalSteps=players.length*_expHoles+players.length*(_expHoles+1);
   let step=0;
   try{
-    // Per player: hole sequence (shot overlays)
     for(const p of players){
-      if(p.id!==effectivePlayerId()){ saveCurrentPlayerData(); S.currentPlayerId=(p.id===SESSION_ID)?null:p.id; loadPlayerData(effectivePlayerId()); }
+      ws.currentPlayerId=(p.id===D.SESSION)?null:p.id;
+      D.syncS(S);
       for(let hi=0;hi<_expHoles;hi++){
-        S.currentHole=hi; S.scorecardSummary=null;
+        ws.currentHole=hi; ws.scorecardSummary=null; ws.shotIndex=-1;
+        D.syncS(S);
         step++; expShowProgress(`${p.name} Shot H${hi+1}`,step/totalSteps);
         redrawOnly();
         const cv=expMakeShotCanvas(w,h);
@@ -2733,10 +2646,10 @@ async function doExportAll(){
         zip.file(fn,blob);
         await expSleep(10);
       }
-      // Scorecard sequence
-      S.scorecardSummary=null;
+      ws.scorecardSummary=null;
       for(let k=1;k<=_expHoles;k++){
-        S.currentHole=k;
+        ws.currentHole=k;
+        D.syncS(S);
         step++; expShowProgress(`${p.name} SC ${k}/${_expHoles}`,step/totalSteps);
         const scCv=expMakeSCCanvas(w,h);
         const rangeStr=k<=1?'0':`1-${k-1}`;
@@ -2745,17 +2658,16 @@ async function doExportAll(){
         zip.file(fn,blob);
         await expSleep(10);
       }
-      // TOT
-      S.scorecardSummary='tot';
+      ws.scorecardSummary='tot';
+      D.syncS(S);
       step++; expShowProgress(`${p.name} SC TOT`,step/totalSteps);
       const totCv=expMakeSCCanvas(w,h);
       const totFn=`${expSanitize(p.name)}_SC_TOT_1-${_expHoles}_${expModeLabel()}_${expResLabel()}.png`;
       const totBlob=await expCanvasToBlob(totCv);
       zip.file(totFn,totBlob);
     }
-    // Restore
-    if(savedPid!==S.currentPlayerId){ saveCurrentPlayerData(); S.currentPlayerId=savedPid; loadPlayerData(effectivePlayerId()); }
-    S.currentHole=savedHole; S.scorecardSummary=savedSummary;
+    ws.currentPlayerId=savedPid; ws.currentHole=savedHole; ws.scorecardSummary=savedSummary; ws.shotIndex=savedSI;
+    D.syncS(S);
     expShowProgress('Packaging ZIP…',0.99);
     const zblob=await zip.generateAsync({type:'blob'});
     expDownloadBlob(zblob,`ALL_export.zip`);
@@ -2764,8 +2676,8 @@ async function doExportAll(){
   } catch(err){
     miniToast(T('exportError')+': '+err.message,true);
     expHideProgress();
-    if(savedPid!==S.currentPlayerId){ saveCurrentPlayerData(); S.currentPlayerId=savedPid; loadPlayerData(effectivePlayerId()); }
-    S.currentHole=savedHole; S.scorecardSummary=savedSummary;
+    ws.currentPlayerId=savedPid; ws.currentHole=savedHole; ws.scorecardSummary=savedSummary; ws.shotIndex=savedSI;
+    D.syncS(S);
   }
   redrawOnly();
 }
@@ -2892,33 +2804,24 @@ function _parseAndApplyCSV(text){
 
   if(playerImports.length===0) throw new Error('No player data found');
 
-  // Save current player data before modifying
-  saveCurrentPlayerData();
-
-  // For each imported player, find or create, then set deltas
+  // For each imported player, find or create, then set gross scores
   playerImports.forEach(imp=>{
-    let player=S.players.find(p=>p.name===imp.name);
+    let player=D.sc().players.find(p=>p.name===imp.name);
     if(!player){
-      // Add new player
       addPlayer(imp.name);
-      player=S.players.find(p=>p.name===imp.name);
+      player=D.sc().players.find(p=>p.name===imp.name);
     }
     if(!player) return;
-    ensurePlayerData(player.id);
+    D.ensureScores(player.id);
 
     for(let hi=0;hi<holeCount;hi++){
       const g=imp.grosses[hi];
       if(g===null) continue;
-      const par=safePar(S.holes[hi]);
-      const delta=par>0?(g-par):null;
-      if(delta===null) continue;
-      setPlayerHoleDelta(player.id, hi, delta);
+      D.setPlayerGross(player.id, hi, g);
     }
   });
 
-  // Sync current player's S.holes back to byPlayer, then reload
-  saveCurrentPlayerData();
-  loadPlayerData(effectivePlayerId());
+  D.syncS(S);
   if(typeof buildHoleNav==='function') buildHoleNav();
   if(typeof buildPlayerArea==='function') buildPlayerArea();
   render();
@@ -2944,32 +2847,25 @@ const MOB_LIE_TYPES = [
 function isMobile(){ return screen.width <= 480 || document.documentElement.classList.contains('narrow'); }
 
 function mobAddStroke(){
-  const h = curHole();
-  if(h.delta === null){
-    h.delta = 1 - safePar(h);
-  } else {
-    if(h.delta + 1 > 12) return;
-    h.delta = h.delta + 1;
-  }
-  h.manualTypes = {};
-  reconcileShots(h);
-  const g = getGross(h);
-  if(g && g > 0) h.shotIndex = g - 1;
+  const pid=D.pid(), hi=D.ws().currentHole;
+  D.adjPlayerGross(pid, hi, 1);
+  const g=D.getPlayerGross(pid, hi);
+  if(g && g > 0) D.ws().shotIndex = g - 1;
+  D.syncS(S);
   render(); scheduleSave();
 }
 
 function mobUndoStroke(){
-  const h = curHole();
-  if(h.delta === null) return;
-  const g = getGross(h);
+  const pid=D.pid(), hi=D.ws().currentHole;
+  const g=D.getPlayerGross(pid, hi);
+  if(g === null) return;
   if(g <= 1){
     clearHole();
   } else {
-    h.delta = h.delta - 1;
-    h.manualTypes = {};
-    reconcileShots(h);
-    const ng = getGross(h);
-    if(ng && ng > 0) h.shotIndex = ng - 1;
+    D.adjPlayerGross(pid, hi, -1);
+    const ng=D.getPlayerGross(pid, hi);
+    if(ng && ng > 0) D.ws().shotIndex = ng - 1;
+    D.syncS(S);
     render(); scheduleSave();
   }
 }
@@ -3412,15 +3308,16 @@ function init(){
   document.querySelectorAll('[data-ui-theme]').forEach(b=>b.classList.toggle('active',b.dataset.uiTheme===S.uiTheme));
   applyBg();
   // Restore saved player — only switch if saved player is valid
-  if(S.players.length>0 && S.currentPlayerId){
-    const valid=S.players.some(p=>p.id===S.currentPlayerId);
-    if(!valid){ S.currentPlayerId=S.players[0].id; loadPlayerData(S.currentPlayerId); }
-  } else if(S.players.length>0 && !S.currentPlayerId){
-    S.currentPlayerId=S.players[0].id; loadPlayerData(S.currentPlayerId);
+  const ws=D.ws();
+  if(S.players.length>0 && ws.currentPlayerId){
+    const valid=S.players.some(p=>p.id===ws.currentPlayerId);
+    if(!valid){ ws.currentPlayerId=S.players[0].id; D.syncS(S); }
+  } else if(S.players.length>0 && !ws.currentPlayerId){
+    ws.currentPlayerId=S.players[0].id; D.syncS(S);
   }
   // Preserve saved currentHole (clamp to valid range)
-  const maxHole=(S.holes.length||18)-1;
-  if(typeof S.currentHole!=='number'||S.currentHole<0||S.currentHole>maxHole) S.currentHole=0;
+  const maxHole=D.holeCount()-1;
+  if(typeof ws.currentHole!=='number'||ws.currentHole<0||ws.currentHole>maxHole){ ws.currentHole=0; D.syncS(S); }
 
   if(typeof buildPlayerArea==='function') buildPlayerArea();
 

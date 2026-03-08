@@ -316,10 +316,12 @@ const CoursePicker = (function(){
     }
 
     // Store selected tee
-    S.selectedTee = _availableTees.length > 0 ? _selectedTee : (S.selectedTee || 'blue');
+    const tee = _availableTees.length > 0 ? _selectedTee : (D.sc().course.selectedTee || 'blue');
+    S.selectedTee = tee;
+    D.sc().course.selectedTee = tee;
 
     // Create round
-    const round = RoundManager.createRoundFromRouting(_selectedClubId, routing, S.selectedTee);
+    const round = RoundManager.createRoundFromRouting(_selectedClubId, routing, tee);
     const orderedHoles = RoundManager.getOrderedHoles();
 
     // Apply to global state
@@ -332,44 +334,52 @@ const CoursePicker = (function(){
   }
 
   /**
-   * Apply round data to global state S.
+   * Apply round data to v4 data layer and rebuild S.
    */
   function _applyRoundToState(round, orderedHoles){
-    // Persist round (including _routing for restore)
-    S.activeRound = JSON.parse(JSON.stringify(round));
+    const sc = D.sc();
+    const ws = D.ws();
 
-    // Update course name
-    S.courseName = round.clubName + ' · ' + round.routingName;
-    const courseInp = document.getElementById('inp-course');
-    if(courseInp) courseInp.value = S.courseName;
+    // Update course snapshot
+    sc.course.clubId = round.clubId;
+    sc.course.clubName = round.clubName;
+    sc.course.routingId = round.routingId;
+    sc.course.routingName = round.routingName;
+    sc.course.routingSourceType = round.routingSourceType;
+    sc.course.routingMeta = round.routingMeta || {};
+    sc.course.courseName = round.clubName + ' · ' + round.routingName;
 
-    // Initialize S.holes from ordered hole data
+    // Cache routing for restore
+    S._activeRouting = round._routing || null;
+
     const count = orderedHoles.length;
-    S.holes = Array.from({length:count}, (_,i)=>{
-      const oh = orderedHoles[i];
+    sc.course.holeCount = count;
+    sc.course.holeSnapshot = Array.from({length:count}, function(_,i){
+      var oh = orderedHoles[i];
       return {
-        par:           oh.par,       // null for placeholder holes
-        holeLengthYds: oh.yard,
-        isPlaceholder: oh.par==null, // true when course data lacks real par/yard
-        delta:         null,
-        shots:         [],
-        shotIndex:     0,
-        manualTypes:   {},
-        toPins:        {}
+        number: i + 1,
+        par: oh.par,
+        yards: oh.yard,
+        holeId: oh.holeId || null
       };
     });
 
-    S.currentHole = 0;
-    S.scorecardSummary = null;
+    // Reset workspace
+    ws.currentHole = 0;
+    ws.scorecardSummary = null;
+    ws.shotIndex = -1;
 
-    // Clear all per-player data
-    if(S.byPlayer){
-      Object.keys(S.byPlayer).forEach(pid=>{
-        S.byPlayer[pid].holes = S.holes.map(()=>({
-          delta:null, shots:[], shotIndex:0, manualTypes:{}, toPins:{}
-        }));
-      });
+    // Clear all player scores for new round
+    for(var pid in sc.scores){
+      sc.scores[pid].holes = Array.from({length:count}, function(){ return D.defPlayerHole(); });
     }
+
+    // Update course name in UI
+    const courseInp = document.getElementById('inp-course');
+    if(courseInp) courseInp.value = sc.course.courseName;
+
+    // Rebuild S
+    D.syncS(S);
   }
 
   function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
