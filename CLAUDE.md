@@ -1,10 +1,15 @@
-# GolfOverlay — 项目说明
+# Golf Event Console — 项目说明
 
 ## 项目名称
-GolfOverlay
+Golf Event Console（原 GolfOverlay）
 
 ## 用途
-高尔夫赛事直播角标助手。在直播截图或背景图上叠加计分卡、当前洞击球信息，并导出为透明PNG角标图片，用于视频制作或直播上屏。
+高尔夫赛事管理与实时展示系统。以球局（Round）为核心，以玩法（Gameplay）为主线，以 Overlay 为差异化展示层。
+
+### 三层架构
+- **Management Layer** — Players / Teams / Clubs / Rounds
+- **Round Workspace** — Scores / Gameplay / Shots
+- **Overlay Engine** — Leaderboard / Player Tag / Scoreboard / Match Board
 
 ## 主要功能
 - **计分卡**：18洞成绩总览，支持前9/后9/全场显示，含OUT/IN/TOT子统计
@@ -19,18 +24,21 @@ GolfOverlay
 
 ```
 GolfOverlay/
-├── index.html          # 页面结构（HTML骨架）
+├── index.html          # App Shell + Overlay Center（HTML骨架）
 ├── css/
-│   └── overlay.css     # 全部样式
+│   ├── overlay.css     # Overlay Center 样式（不修改）
+│   └── shell.css       # App Shell 样式（可收起Sidebar / Workspace / BottomNav / 页面）
 ├── data/
 │   └── courses.json    # 球场数据库（静态JSON）
 ├── js/
 │   ├── data.js         # v4.0 统一数据访问层（最先加载）
+│   ├── round.js        # Round 数据模型（纯函数，data.js 之后加载）
 │   ├── courseDatabase.js # 球场数据管理层
 │   ├── scoreboard.js   # 计分卡逻辑
 │   ├── ui.js           # 界面操作
 │   ├── roundManager.js # Round状态管理
 │   ├── coursePicker.js # 球场选择器UI
+│   ├── clubStore.js    # Club球会主数据CRUD + localStorage持久化
 │   ├── sessionIO.js   # 球局JSON导入导出
 │   ├── import/          # GolfLive成绩导入模块
 │   │   ├── importTypes.js      # 导入类型定义（JSDoc）
@@ -38,7 +46,16 @@ GolfOverlay/
 │   │   ├── golfliveParser.js   # GolfLive表解析器
 │   │   ├── roundBuilder.js     # 导入数据→Round构建
 │   │   └── importController.js # 导入流程控制+UI桥接
-│   └── app.js          # 应用核心（最后加载）
+│   ├── shell/           # App Shell 框架（app.js 之后加载）
+│   │   ├── router.js        # Hash-based SPA 路由器
+│   │   ├── shell.js         # Shell 控制器 + 页面管理
+│   │   ├── homePage.js      # Home 页面渲染
+│   │   ├── roundsPage.js   # Rounds 列表页面渲染
+│   │   ├── coursesPage.js  # Courses 列表页面 + Drawer 详情
+│   │   ├── courseDetailPage.js # Club 详情/编辑页面
+│   │   ├── courseStructureEditor.js # 3列结构编辑器
+│   │   └── courseImportPage.js # GolfLive球场批量导入页面
+│   └── app.js          # 应用核心（Overlay Center 逻辑）
 ├── assets/
 │   └── icons/          # 图标资源（备用）
 ├── bkimg.jpeg          # 默认背景图
@@ -93,6 +110,7 @@ v4.0 统一数据访问层（IIFE `D`），无依赖：
 ## 加载顺序
 ```html
 <script src="js/data.js"></script>            <!-- v4.0 数据层，无依赖 -->
+<script src="js/round.js"></script>          <!-- Round 数据模型，纯函数，无依赖 -->
 <script src="js/courseDatabase.js"></script>  <!-- 无依赖 -->
 <script src="js/scoreboard.js"></script>      <!-- 无依赖 -->
 <script src="js/ui.js"></script>              <!-- 依赖 scoreboard.js, data.js -->
@@ -104,7 +122,17 @@ v4.0 统一数据访问层（IIFE `D`），无依赖：
 <script src="js/import/golfliveParser.js"></script>  <!-- 依赖 SheetJS (XLSX) -->
 <script src="js/import/roundBuilder.js"></script>    <!-- 依赖 data.js -->
 <script src="js/import/importController.js"></script><!-- 依赖以上 import 模块 + UI -->
+<script src="js/clubStore.js"></script>       <!-- Club 球会 CRUD，依赖 data.js -->
 <script src="js/app.js"></script>             <!-- 依赖所有以上 -->
+<!-- App Shell（app.js init 完成后加载） -->
+<script src="js/shell/router.js"></script>   <!-- Hash 路由，无依赖 -->
+<script src="js/shell/homePage.js"></script>  <!-- Home 页面，依赖 data.js -->
+<script src="js/shell/roundsPage.js"></script><!-- Rounds 页面，依赖 data.js -->
+<script src="js/shell/coursesPage.js"></script><!-- Courses 页面，依赖 clubStore.js -->
+<script src="js/shell/courseDetailPage.js"></script><!-- Club 详情编辑，依赖 clubStore.js -->
+<script src="js/shell/courseStructureEditor.js"></script><!-- 结构编辑器，依赖 clubStore.js -->
+<script src="js/shell/courseImportPage.js"></script><!-- GolfLive球场导入，依赖 clubStore.js -->
+<script src="js/shell/shell.js"></script>     <!-- Shell 控制器，依赖以上 shell 模块 -->
 ```
 
 ## 数据模型 (v4.0)

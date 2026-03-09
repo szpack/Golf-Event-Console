@@ -11,6 +11,7 @@ const D = (function(){
   const LS_WS   = 'golf_v4_workspace';
   const LS_OLD  = 'golf_v531';
   const LS_BG   = 'golf_v531_bg';
+  const LS_ROUNDS = 'golf_v5_rounds';
   const SESSION = '__session__';
 
   // ── Player status enum ──
@@ -32,6 +33,7 @@ const D = (function(){
 
   let _sc = null;   // scorecardData
   let _ws = null;   // workspaceState
+  let _rounds = null; // Round persistence store (golf_v5_rounds)
 
   // ══════════════════════════════════════════
   // DEFAULT FACTORIES
@@ -398,9 +400,14 @@ const D = (function(){
   // INITIALIZATION
   // ══════════════════════════════════════════
 
+  function defRoundsStore(){
+    return { version:'5.0', activeRoundId:null, rounds:{} };
+  }
+
   function init(){
     _sc = defScorecard();
     _ws = defWorkspace();
+    _rounds = defRoundsStore();
   }
 
   // ══════════════════════════════════════════
@@ -774,6 +781,27 @@ const D = (function(){
         localStorage.removeItem(LS_BG);
       }
     } catch(e){ console.warn('[D] save error', e); }
+    // ── Round persistence (parallel layer, does not affect _sc/_ws) ──
+    _saveRounds();
+  }
+
+  /**
+   * Generate Round snapshot from current _sc and persist to golf_v5_rounds.
+   * Graceful: if Round module unavailable, silently skip.
+   */
+  function _saveRounds(){
+    if(typeof Round === 'undefined') return;
+    try {
+      if(!_rounds) _rounds = defRoundsStore();
+      var roundObj = Round.fromScorecard(_sc);
+      var rid = roundObj.id;
+      // Stabilize roundId: write back to _sc.meta so next save reuses same ID
+      if(!_sc.meta) _sc.meta = {};
+      if(!_sc.meta.roundId) _sc.meta.roundId = rid;
+      _rounds.activeRoundId = rid;
+      _rounds.rounds[rid] = Round.exportRound(roundObj);
+      localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds));
+    } catch(e){ console.warn('[D] round save error', e); }
   }
 
   function load(){
@@ -789,6 +817,7 @@ const D = (function(){
         _sc = parsedSc;
         _ws = parsedWs;
         try { _postLoad(); } catch(pe){ console.warn('[D] postLoad warning (data kept):', pe); }
+        _loadRounds();
         console.log('[D] loaded v4 data');
         return 'v4';
       } catch(e){ console.warn('[D] v4 parse error, trying v531', e); }
@@ -803,6 +832,7 @@ const D = (function(){
         _ws = result.workspace;
         _ws.userBg = localStorage.getItem(LS_BG) || null;
         _postLoad();
+        _loadRounds();
         console.log('[D] migrated from v531 to v4');
         // Save in v4 format immediately
         save();
@@ -812,6 +842,32 @@ const D = (function(){
     // Priority 3: fresh start
     init();
     return 'fresh';
+  }
+
+  /**
+   * Restore Round store from localStorage.
+   * Does NOT affect _sc / _ws — parallel layer only.
+   */
+  function _loadRounds(){
+    try {
+      var raw = localStorage.getItem(LS_ROUNDS);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && parsed.version && parsed.rounds){
+          _rounds = parsed;
+          // Normalize rounds via Round module if available
+          if(typeof Round !== 'undefined'){
+            for(var rid in _rounds.rounds){
+              _rounds.rounds[rid] = Round.normalizeRound(_rounds.rounds[rid]);
+            }
+          }
+          console.log('[D] loaded rounds store, active:', _rounds.activeRoundId,
+                      'count:', Object.keys(_rounds.rounds).length);
+          return;
+        }
+      }
+    } catch(e){ console.warn('[D] rounds load error', e); }
+    _rounds = defRoundsStore();
   }
 
   function _postLoad(){
@@ -1213,6 +1269,62 @@ const D = (function(){
   }
 
   // ══════════════════════════════════════════
+  // ROUND STORE ACCESSORS
+  // ══════════════════════════════════════════
+
+  /** Get the full rounds store (read-only intent). */
+  function getRoundsStore(){ return _rounds || defRoundsStore(); }
+
+  /** Get the active round ID (or null). */
+  function getActiveRoundId(){
+    return _rounds ? _rounds.activeRoundId : null;
+  }
+
+  /** Get the active Round object (or null). */
+  function getActiveRound(){
+    if(!_rounds || !_rounds.activeRoundId) return null;
+    return _rounds.rounds[_rounds.activeRoundId] || null;
+  }
+
+  /** Get a specific round by ID (or null). */
+  function getRound(id){
+    if(!_rounds || !id) return null;
+    return _rounds.rounds[id] || null;
+  }
+
+  /** List all round IDs. */
+  function listRoundIds(){
+    if(!_rounds) return [];
+    return Object.keys(_rounds.rounds);
+  }
+
+  /**
+   * Insert or overwrite a round in the store. Cannot overwrite the active round.
+   * @param {Object} round - Round object (must have .id)
+   * @returns {boolean} true if stored
+   */
+  function putRound(round){
+    if(!_rounds || !round || !round.id) return false;
+    if(round.id === _rounds.activeRoundId) return false; // safety
+    _rounds.rounds[round.id] = round;
+    try { localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds)); } catch(e){}
+    return true;
+  }
+
+  /**
+   * Delete a round by ID. Cannot delete the active round.
+   * @returns {boolean} true if deleted
+   */
+  function deleteRound(id){
+    if(!_rounds || !id) return false;
+    if(id === _rounds.activeRoundId) return false; // safety
+    if(!_rounds.rounds[id]) return false;
+    delete _rounds.rounds[id];
+    try { localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds)); } catch(e){}
+    return true;
+  }
+
+  // ══════════════════════════════════════════
   // PUBLIC API
   // ══════════════════════════════════════════
 
@@ -1248,6 +1360,10 @@ const D = (function(){
     migrateTeamField:migrateTeamField, migrateColor:migrateColor,
     // Persistence
     save:save, load:load,
+    // Round store
+    getRoundsStore:getRoundsStore, getActiveRoundId:getActiveRoundId,
+    getActiveRound:getActiveRound, getRound:getRound,
+    listRoundIds:listRoundIds, putRound:putRound, deleteRound:deleteRound,
     // Legacy compat
     syncS:syncS, syncFromS:syncFromS,
     migrateV531:migrateV531,

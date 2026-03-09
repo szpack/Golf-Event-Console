@@ -115,7 +115,174 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 ## Changelog
 
+### v19.4.0 — 2026-03-09
+- Import Diff：导入预览表格新增 Nines / Layouts / Match / Action 列
+- 匹配策略分级：优先 `external.golflive.club_id`，次级 `name+city`，再次 alias
+- 三种导入动作：Create New / Match & Update / Link as Alias，用户可逐行切换
+- Match & Update：覆盖 nines/layouts/geo，合并省市信息
+- Link as Alias：将 GolfLive 名称添加到目标 Club 的 aliases 列表
+- Club 数据模型新增 `external: { golflive: { golf_live_id, club_id, imported_at, source_file } }`
+- Import Audit：每次导入结果自动保存到 `golf_v5_import_audits`（localStorage）
+- 结果面板扩展为 5 列统计：Created / Updated / Aliased / Skipped / Errors
+- Courses 列表页 Header 新增 Import 按钮（New Club 左侧）
+
+### v19.3.0 — 2026-03-09
+- 新增 GolfLive Importer 页面（#/courses/import）：支持从 GolfLive JSON 批量导入球场数据
+- 上传区域支持拖拽放入或点击选择 JSON 文件
+- 导入预览表格：展示球场名称、地区、城市、洞数、Halves数量，自动标记重复项
+- 去重逻辑：按 name + city 匹配已有记录，重复自动跳过
+- 自动转换：Halves → nines（含 HolePars/HoleHDCP），按洞数自动生成 layouts
+- 导入结果面板：显示 Imported / Skipped / Errors 统计
+- ClubStore 新增 `importGolfLiveCourses(json)` 批量导入 API
+- Shell 新增路由 `/courses/import`，courseImport 页面高亮 Courses 导航项
+
+### v19.2.0 — 2026-03-09
+- 新增 Structure Editor（#/courses/:id/structure）：3列布局 Tree | Hole Grid | Inspector
+- 左侧 Tree 面板：展示 Nines / Layouts / Tee Sets，支持选择节点、新增、删除
+- 中央 Hole Grid：选中 Nine 后显示可编辑洞数据表格（Par / HCP / 每个 Tee 的 Yards & Meters）
+- 右侧 Inspector：根据选中对象显示属性编辑器（Nine / Layout / Tee Set）
+- Layout Inspector 支持 Segment 管理（添加/移除 Nine，自动编号）
+- ClubStore 新增结构变更 API：createNine / updateNine / deleteNine / updateHole / updateNineHoles / createTeeSet / updateTeeSet / deleteTeeSet / createLayout / updateLayout / deleteLayout
+- Club Detail Page "Edit Structure" 按钮现导航至 Structure Editor
+- 脏状态检测 + 未保存离开保护 + Cancel 回滚快照
+- Dark / Light 主题完整适配 + 900px/768px 响应式断点
+- 新增文件：`js/shell/courseStructureEditor.js`
+
+### v19.1.0 — 2026-03-09
+- 新增 Club Detail Page (#/courses/:id)：基础信息编辑 + 结构概览
+- 表单：Basic Info（中英文名/别名/省市区县/国家）、Status & Audit（状态/来源/验证级别）、Structure Summary、Notes
+- 脏状态检测：修改任意字段后显示 Save/Cancel 按钮
+- 未保存离开保护：路由切换时 confirm 提示
+- Sidebar 高亮：courseDetail 页面同步高亮 Courses 导航项
+- Drawer "Edit Details" → 导航至 Full Detail Page
+- 新增 district 字段到 Club 数据模型
+- Dark / Light 主题完整适配 + 移动端响应式
+- 新增文件：`js/shell/courseDetailPage.js`
+
+### v19.0.0 — 2026-03-09
+- 新增 Courses 模块 P0：ClubStore 数据层 + Courses 列表页 + 搜索筛选 + Drawer 详情
+- Club 数据模型：顶层为 Club（球会），含 nines / layouts / tee_sets / status / verification_level
+- Layout 使用 segments 有序结构引用 Nine，Hole tee 数据统一为 `tees: { tee_id: { yards, meters } }`
+- 状态字段增加 status_source / status_as_of 追踪营业状态来源
+- CompletenessBar 算法：基础信息20 + 洞数据60 + Layouts10 + 元数据10 = 100分制
+- Drawer 右侧滑出面板展示球会摘要，深度编辑导航至 Full Detail Page（P1）
+- Sidebar Management 区新增 Courses 入口
+- localStorage key: `golf_v5_clubs`
+- 新增文件：`js/clubStore.js`, `js/shell/coursesPage.js`
+- 路由：`#/courses` → 列表页
+
+### v18.3.0 — 2026-03-09
+- Typography 层级统一：Brand 18px → Page Title 16px/#d1d5db → Section 13px → Card 14px → Meta 12px/#71717a
+- 页面标题不再比品牌更显眼（16px #d1d5db vs Brand 18px #e5e5e5）
+- Sidebar 结构重组：Main → Management → Workspace → Recent（去除 Quick Start 快捷区）
+- Sidebar body padding 调整为 16px，section spacing 28px
+- Workspace header padding 收紧（20px 32px 12px）
+- Hero card / status 字号统一缩小，meta 统一 12px/#71717a
+- Light 模式同步适配新 typography 层级
+
+### v18.2.1 — 2026-03-09
+- 修复 Light 主题选择器：`html[data-ui-theme="light"]` → `html.light`（匹配 applyUITheme 的 class 切换）
+- Light 模式全面完善：Sidebar/Workspace/Cards/Buttons/Search/Settings/Status badges/Hero card 等全部适配
+- Dark 模式 token 确认一致：所有组件统一使用 `--bg-hover/--bg-active/--border-subtle/--text-*` 变量
+- Light accent 调整为 `#16a34a`（更适合浅底色）
+- Light tooltip/scrollbar/backdrop 色值补齐
+
+### v18.2.0 — 2026-03-09
+- 全局视觉体系升级：建立统一 Design Token 系统
+- 颜色：--bg-main/#0f0f11, --bg-sidebar/#171717, --bg-hover/--bg-active 半透明层级
+- 文字：--text-primary/#e5e5e5, --text-secondary/#a1a1aa, --text-section/#6b7280
+- 边框：--border-subtle 替代所有硬色分割线
+- Sidebar：nav item 高度 44px，icon 20px/opacity 0.85，section spacing 28px
+- Typography 统一 Inter 14px/1.5，workspace header 20px/600
+- Spacing 统一 8px grid，去除所有 box-shadow
+- Cards/Buttons/Inputs 全部使用 token 变量，hover=bg-hover, active=bg-active
+- Status badges 改用半透明背景
+- Light theme 同步 token 化
+
+### v18.1.0 — 2026-03-09
+- 全面优化背景色系：Sidebar #171717 / Workspace #0f0f11，接近 ChatGPT/Gemini 风格
+- 去除所有分割线，改用 spacing 分组
+- 文字色系统一：Primary #e5e5e5 / Secondary #a1a1aa / Section #6b7280
+- Hover/Active 改用半透明白 rgba(255,255,255,0.06/0.12)
+- Settings 从抽屉改为 Workspace 独立页面，统一排版规范
+- Light theme 同步调整
+
+### v18.0.1 — 2026-03-09
+- Overlay Center 页面统一使用 Workspace Header 显示标题，隐藏内部 #hdr
+
 <!-- Claude: keep this section updated. Newest on top. -->
+
+### v18.0.0 — 2026-03-09
+- **Sidebar 重构**：信息架构升级为 Quick Start / Navigate / Manage / Live & Recent
+- Sidebar 可收起（64px icon-only）/ 展开（280px），状态 localStorage 持久化
+- 移动端 Sidebar 变为 Drawer，hamburger 按钮触发，backdrop 点击关闭
+- Live & Recent 区域动态渲染：活跃球局(绿点) + 计划中(蓝点) + 最近完成(灰点)
+- Typography 升级：Inter 字体 + Tailwind 风格配色变量
+- 收起态 icon tooltip、section label 自动隐藏
+- Overlay Center 内部零改动
+
+### v17.0.1 — 2026-03-09
+- Shell 字体字号对齐 GPT/Gemini 风格：系统字体栈、14px 基础字号、宽松行距
+- Sidebar 导航 14px，按钮/卡片/搜索框统一放大，页面标题 24px
+- Overlay Center 字体不受影响
+
+### v17.0.0 — 2026-03-09
+- **UI Shell 重构**：TopBar 移除，升级为 `Sidebar | Workspace` 双栏布局（对标 ChatGPT / Cursor / Linear）
+- Sidebar 全高固定 240px：品牌区 + 导航 + 底部工具（语言选择 / 设置 / 版本号）
+- 新增 Workspace Header：显示当前页面标题，Overlay Center 页自动隐藏（沉浸模式）
+- Overlay Center 内部 UI 零改动
+- 移动端 Sidebar 隐藏，BottomNav 保留
+- Rounds 页增强：按状态分组（Playing → Planned → Finished），搜索过滤，Duplicate 按钮，内联删除确认
+- 数据层新增 `D.putRound()` API
+
+### v16.0.2 — 2026-03-09
+- 提取 `roundHelper.js` 共享模块：Home / Rounds 页统一 Round 摘要构建与格式化
+- Current Round 卡片增加 gameplay 类型展示（Stroke Play / Match Play 等）
+- 球员名显示压缩：最多 3 人 + "+N" 后缀
+- meta 行统一格式：`N players · N holes · X/Y played`
+- Rounds 页去掉冗余 Active badge，活跃球局仅靠绿色边框区分
+- Home 和 Rounds 页 Round Card 字段完全统一
+- 按钮文案统一：Rounds 页 `Open` → `Open Round`，Home 去掉语义重复的 `Overlay Center` 按钮
+- 去掉未使用的 `.sh-mgmt-grid` / `.sh-mgmt-item` / `.sh-badge-active` CSS
+
+### v16.0.1 — 2026-03-09
+- Home 页面重构：Current Round → Recent Rounds → Quick Actions → Management 优先级
+- Current Round 卡片重做：展示球场/路线/日期/人数/进度条/球员列表，[Continue Round] + [Overlay Center] 双按钮
+- Management 区域缩弱为 pill 按钮，不抢主视觉
+- 语言切换 + 设置按钮提升为全局 TopBar 控件，Overlay Center 内原按钮 CSS 隐藏
+- 顶栏品牌区精简，去掉重复标题行
+
+### v16.0.0 — 2026-03-09
+- **Product rename: Golf Event Console** — round-centric golf event system
+- 新增 App Shell 框架：TopBar + Sidebar（桌面）+ BottomNav（移动端）
+- 新增 Hash-based SPA 路由：`#/`、`#/rounds`、`#/round/:id`、`#/players`、`#/teams`、`#/clubs`
+- 新增 Home 页面：当前球局卡片、快速操作入口、最近球局列表、管理模块入口
+- 新增 Rounds 列表页面：球局列表、创建/删除/进入球局
+- 新增 Players / Teams / Clubs 占位页面
+- 现有 Overlay Center 整体包裹在 App Shell 内，内部代码零修改
+- 一套 UI 自适应桌面与移动端（sidebar ↔ bottom nav）
+- 新增文件：`css/shell.css`、`js/shell/router.js`、`js/shell/shell.js`、`js/shell/homePage.js`、`js/shell/roundsPage.js`
+
+### v15.1.0 — 2026-03-09
+- 新增 Round 持久化并存层（`golf_v5_rounds` localStorage key）
+- `D.save()` 自动从 `D.sc()` 生成 Round 快照并持久化，Round 不可用时静默跳过
+- `D.load()` 自动恢复 Round store，不影响 `_sc`/`_ws` 主恢复逻辑
+- 多球局索引结构：`{ version, activeRoundId, rounds:{} }` — 为未来多球局预留
+- 新增公共 API：`D.getActiveRound()` / `D.getActiveRoundId()` / `D.getRound(id)` / `D.listRoundIds()` / `D.deleteRound(id)` / `D.getRoundsStore()`
+- roundId 稳定性：首次保存回写 `_sc.meta.roundId`，后续保存复用同一 ID
+
+### v15.0.0 — 2026-03-09
+- 新增 `js/round.js` — Round 数据模型纯函数层
+- 7 组核心 API：createRound / normalizeRound / player 管理 / setRoundPlayerHole / calcTotals / cloneRound / export-import
+- 最小桥接：fromScorecard / toScorecard 支持 D.sc() ↔ Round 双向转换
+- 状态映射函数：mapStatusToRound / mapStatusToScorecard / mapStatusToRoundSmart
+- 导出链路接入：SessionIO.serializeRoundState() 经过 Round 中间层，导出 JSON 新增 `_roundData` 字段
+- 导入链路接入：SessionIO.deserializeRoundState() 识别 `_roundData`，经 Round 层处理 course 引用 + meta；旧版 JSON 完全兼容
+- 新建球局接入：CoursePicker._applyRoundToState() 经 Round.createRound() 生成 Round 对象，驱动 roundId + createdAt
+- 新增 SessionIO.getCurrentRound() API
+- GolfLive 导入接入：RoundBuilder.buildAndApply() 经 Round.createRound() 构建 Round 对象，驱动 roundId + createdAt
+- 内置 `Round._selfTest()` 自检（浏览器控制台可执行）
+- 不影响现有 UI / Canvas / RoundManager / 导入行为
 
 ### v14.0.1 — 2026-03-08
 - 修复GolfLive导入只解析9洞的严重bug：`findHoleColumns()` 遇到OUT/IN汇总列时提前终止，现在正确跳过间隔列继续搜索后9洞洞号

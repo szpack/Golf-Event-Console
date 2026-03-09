@@ -1,6 +1,6 @@
 // ============================================================
 // roundBuilder.js — Convert ImportedMatch to App Round
-// Depends on: data.js (D API)
+// Depends on: data.js (D API), round.js (Round — optional, graceful fallback)
 // ============================================================
 //
 // This module takes a normalized ImportedMatch and writes it
@@ -28,21 +28,65 @@ const RoundBuilder = (function(){
   function buildAndApply(match){
     var sc = D.sc();
     var ws = D.ws();
+    var hc = match.course.holeCount;
+    var pars = match.course.pars;
+
+    // ── 0. Build Round object (optional, graceful fallback) ──
+    var roundObj = null;
+    if(typeof Round !== 'undefined'){
+      // Build _courseSnapshot for [COMPAT] bridge
+      var snapshot = pars.map(function(par, i){
+        return { number: i + 1, par: par, yards: null, holeId: null };
+      });
+
+      // Build player inputs for Round.createRound
+      var playerInputs = match.players.map(function(p, i){
+        var rpId = D.genRoundPlayerId('imp', i);
+        p._id = rpId; // stash for score mapping (used in step 3/4)
+        return { roundPlayerId: rpId, name: p.name };
+      });
+
+      roundObj = Round.createRound({
+        courseId: null,       // GolfLive has no course DB reference
+        routingId: null,
+        holeCount: hc,
+        status: 'playing',
+        event: { name: match.event.title || '', id: '' },
+        players: playerInputs,
+        _courseSnapshot: snapshot
+      });
+
+      // Write scores into Round object
+      match.players.forEach(function(p){
+        for(var i = 0; i < hc; i++){
+          var gross = p.grossByHole ? p.grossByHole[i] : null;
+          if(gross === undefined) gross = null;
+          if(gross !== null){
+            Round.setRoundPlayerHole(roundObj, p._id, i, { gross: gross, status: 'valid' });
+          }
+        }
+      });
+    } else {
+      // No Round module — still need to stash _id on match.players
+      match.players.forEach(function(p, i){
+        p._id = D.genRoundPlayerId('imp', i);
+      });
+    }
 
     // ── 1. Clear existing round state ──
     if(typeof RoundManager !== 'undefined') RoundManager.clearRound();
 
     // ── 2. Write course snapshot ──
-    sc.course.clubId = null;
+    sc.course.clubId = roundObj ? roundObj.courseId : null;
     sc.course.clubName = '';
     sc.course.courseName = match.event.courseName || match.event.title || '';
-    sc.course.routingId = null;
+    sc.course.routingId = roundObj ? roundObj.routingId : null;
     sc.course.routingName = '';
     sc.course.routingSourceType = null;
     sc.course.routingMeta = {};
     sc.course.selectedTee = 'blue';
-    sc.course.holeCount = match.course.holeCount;
-    sc.course.holeSnapshot = match.course.pars.map(function(par, i){
+    sc.course.holeCount = hc;
+    sc.course.holeSnapshot = pars.map(function(par, i){
       return {
         number: i + 1,
         par: par,
@@ -52,20 +96,16 @@ const RoundBuilder = (function(){
     });
 
     // ── 3. Write players ──
-    sc.players = match.players.map(function(p, i){
-      var rpId = D.genRoundPlayerId('imp', i);
-      p._id = rpId; // stash for score mapping
+    sc.players = match.players.map(function(p){
       var overrides = {};
       if(p.groupNo != null) overrides.groupId = 'g' + p.groupNo;
-      var player = D.defPlayer(rpId, p.name, overrides);
+      var player = D.defPlayer(p._id, p.name, overrides);
       return player;
     });
 
     // ── 4. Write scores ──
     // Write directly to sc.scores to avoid D.setPlayerGross creating fake shots
     sc.scores = {};
-    var hc = match.course.holeCount;
-    var pars = match.course.pars;
 
     match.players.forEach(function(p){
       var holes = [];
@@ -93,9 +133,10 @@ const RoundBuilder = (function(){
       importedAt: match.sourceMeta.importedAt
     };
 
-    // ── 6. Write meta (merge, don't overwrite) ──
+    // ── 6. Write meta ──
     sc.meta = Object.assign({}, sc.meta || {}, {
-      createdAt: new Date().toISOString(),
+      roundId: roundObj ? roundObj.id : undefined,
+      createdAt: roundObj ? roundObj.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       title: match.event.title || '',
       roundLabel: match.event.roundLabel || ''

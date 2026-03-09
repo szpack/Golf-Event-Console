@@ -1,6 +1,6 @@
 // ============================================================
 // sessionIO.js — Round Session Import / Export
-// Depends on: data.js (D API)
+// Depends on: data.js (D API), round.js (Round — optional, graceful fallback)
 // ============================================================
 //
 // Data truth hierarchy:
@@ -26,7 +26,7 @@ const SessionIO = (function(){
 
   const SCHEMA_VERSION = '4.1';
   const KIND = 'round-session';
-  const CURRENT_APP_VERSION = '14.0.0';
+  const CURRENT_APP_VERSION = '15.0.0';
 
   // ══════════════════════════════════════════
   // SERIALIZE — build export payload
@@ -35,10 +35,20 @@ const SessionIO = (function(){
   /**
    * Serialize current round state into a clean export object.
    * Only truth data is included; derived caches are stripped.
+   *
+   * v15.0.0: 导出链路经过 Round 中间层。
+   *   Round.fromScorecard(sc) 提取核心真相 → 驱动 meta / round 区块。
+   *   Rich fields (players 完整信息, putts, shots, teams, groups, uiState)
+   *   仍然从 D.sc() / D.ws() 直取，因为 Round 不拥有这些字段。
    */
   function serializeRoundState(){
     const sc = D.sc();
     const ws = D.ws();
+
+    // ── v15: 生成 Round 中间对象 ──
+    // Round 驱动 meta.roundId / round.courseId / round.routingId 等核心引用。
+    // 若 Round 模块不可用则 graceful fallback 到原始逻辑。
+    var roundObj = (typeof Round !== 'undefined') ? Round.fromScorecard(sc) : null;
 
     // Build players array — preserve array order (the single truth for ordering)
     const players = (sc.players || []).map(function(p, i){
@@ -126,27 +136,31 @@ const SessionIO = (function(){
       playerName: ws.playerName || 'PLAYER'
     };
 
-    return {
+    // ── 组装导出 payload ──
+    // meta / round 区块：优先从 roundObj 取（保证 roundId 始终存在），
+    //                    回退到 D.sc() 原始逻辑。
+    // players / holes / teams / groups / uiState：仍从 D 直取（Round 不拥有这些 rich fields）。
+    var payload = {
       schemaVersion: SCHEMA_VERSION,
       kind: KIND,
       appVersion: CURRENT_APP_VERSION,
       exportedAt: new Date().toISOString(),
       playerSchemaVersion: sc.playerSchemaVersion || '4.1',
       meta: {
-        roundId: sc.meta && sc.meta.roundId || null,
-        createdAt: sc.meta && sc.meta.createdAt || null,
-        updatedAt: sc.meta && sc.meta.updatedAt || new Date().toISOString()
+        roundId:   roundObj ? roundObj.id        : (sc.meta && sc.meta.roundId || null),
+        createdAt: roundObj ? roundObj.createdAt  : (sc.meta && sc.meta.createdAt || null),
+        updatedAt: roundObj ? roundObj.updatedAt  : (sc.meta && sc.meta.updatedAt || new Date().toISOString())
       },
       round: {
-        clubId: sc.course.clubId || null,
-        clubName: sc.course.clubName || '',
-        courseName: sc.course.courseName || '',
-        routingId: sc.course.routingId || null,
-        routingName: sc.course.routingName || '',
-        routingSourceType: sc.course.routingSourceType || null,
-        routingMeta: sc.course.routingMeta || {},
-        selectedTee: sc.course.selectedTee || 'blue',
-        holeCount: hc,
+        clubId:           roundObj ? roundObj.courseId  : (sc.course.clubId || null),
+        clubName:         sc.course.clubName || '',
+        courseName:       sc.course.courseName || '',
+        routingId:        roundObj ? roundObj.routingId : (sc.course.routingId || null),
+        routingName:      sc.course.routingName || '',
+        routingSourceType:sc.course.routingSourceType || null,
+        routingMeta:      sc.course.routingMeta || {},
+        selectedTee:      sc.course.selectedTee || 'blue',
+        holeCount:        roundObj ? roundObj.holeCount : hc,
         holeSnapshot: (sc.course.holeSnapshot || []).slice(0, hc).map(function(h){
           return { number: h.number, par: h.par, yards: h.yards, holeId: h.holeId || null };
         })
@@ -157,6 +171,15 @@ const SessionIO = (function(){
       holes: holes,
       uiState: uiState
     };
+
+    // ── v15: 附加完整 Round 对象 ──
+    // 供下游消费者或调试使用。_前缀表示非正式 schema 字段，
+    // 现有导入器会忽略它（validateRoundPayload 不检查多余字段）。
+    if(roundObj){
+      payload._roundData = Round.exportRound(roundObj);
+    }
+
+    return payload;
   }
 
   // ══════════════════════════════════════════
@@ -379,22 +402,55 @@ const SessionIO = (function(){
     var sc = D.sc();
     var ws = D.ws();
 
+    // ══════════════════════════════════════════
+    // v15: 如果 payload 携带 _roundData，先经过 Round 层处理 course 引用 + meta。
+    // Rich fields（players 完整信息、putts、penalties、shots 嵌套、teams、groups、uiState）
+    // 仍然由下方旧逻辑从 payload 直接写入——Round 不拥有这些字段。
+    // 如果 _roundData 不存在（旧版 JSON），完全走旧逻辑，保持兼容。
+    // ══════════════════════════════════════════
+    var roundObj = null;
+    if(payload._roundData && typeof Round !== 'undefined'){
+      roundObj = Round.importRound(payload._roundData);
+      // 用 Round 驱动 course 引用 + meta
+      sc.course.clubId    = roundObj.courseId;
+      sc.course.routingId = roundObj.routingId;
+      sc.course.holeCount = roundObj.holeCount;
+      sc.meta = {
+        roundId:   roundObj.id,
+        createdAt: roundObj.createdAt,
+        updatedAt: new Date().toISOString()
+      };
+      console.log('[SessionIO] import: Round layer applied (id=' + roundObj.id + ')');
+    } else {
+      // ── 旧版 fallback：从 payload 直接写 meta ──
+      sc.meta = {
+        createdAt: (payload.meta && payload.meta.createdAt) || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      if(payload.meta && payload.meta.roundId) sc.meta.roundId = payload.meta.roundId;
+    }
+
     // ── Write course snapshot ──
+    // 显示字段始终从 payload.round 取（Round 不存储 clubName 等显示数据）
     sc.version = payload.schemaVersion;
-    sc.course.clubId = payload.round.clubId;
-    sc.course.clubName = payload.round.clubName || '';
-    sc.course.courseName = payload.round.courseName || '';
-    sc.course.routingId = payload.round.routingId;
-    sc.course.routingName = payload.round.routingName || '';
+    // clubId / routingId / holeCount 可能已被 Round 写入，此处仅补充未被覆盖的情况
+    if(!roundObj){
+      sc.course.clubId    = payload.round.clubId;
+      sc.course.routingId = payload.round.routingId;
+      sc.course.holeCount = payload.round.holeCount || 18;
+    }
+    sc.course.clubName          = payload.round.clubName || '';
+    sc.course.courseName        = payload.round.courseName || '';
+    sc.course.routingName       = payload.round.routingName || '';
     sc.course.routingSourceType = payload.round.routingSourceType;
-    sc.course.routingMeta = payload.round.routingMeta || {};
-    sc.course.selectedTee = payload.round.selectedTee || 'blue';
-    sc.course.holeCount = payload.round.holeCount || 18;
+    sc.course.routingMeta       = payload.round.routingMeta || {};
+    sc.course.selectedTee       = payload.round.selectedTee || 'blue';
     sc.course.holeSnapshot = payload.round.holeSnapshot.map(function(h){
       return { number: h.number, par: h.par, yards: h.yards, holeId: h.holeId || null };
     });
 
     // ── Write players (already normalized) ──
+    // 始终从 payload.players 取：包含 displayName、hcpSnapshot 等 Round 不拥有的 rich fields
     sc.players = payload.players.slice();
     sc.playerSchemaVersion = '4.1';
 
@@ -403,6 +459,7 @@ const SessionIO = (function(){
     sc.groups = (payload.groups || []).slice();
 
     // ── Write scores ──
+    // 始终从 payload.holes 取：包含 putts、penalties、notes、shots 嵌套等 Round 不拥有的字段
     sc.scores = {};
     var hc = sc.course.holeCount;
     for(var pid in payload.holes){
@@ -435,13 +492,6 @@ const SessionIO = (function(){
         totals: {}  // derived — always empty on import
       };
     }
-
-    // ── Write meta ──
-    sc.meta = {
-      createdAt: (payload.meta && payload.meta.createdAt) || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    if(payload.meta && payload.meta.roundId) sc.meta.roundId = payload.meta.roundId;
 
     // ── Write UI state ──
     var ui = payload.uiState || {};
@@ -541,6 +591,20 @@ const SessionIO = (function(){
   }
 
   // ══════════════════════════════════════════
+  // ROUND OBJECT ACCESS (v15)
+  // ══════════════════════════════════════════
+
+  /**
+   * 从当前 D.sc() 生成 Round 对象（不写回、不副作用）。
+   * 用于外部需要 Round 结构的场景（如调试、未来多 round 管理）。
+   * @returns {Round|null} Round 对象，或 null（Round 模块未加载时）
+   */
+  function getCurrentRound(){
+    if(typeof Round === 'undefined') return null;
+    return Round.fromScorecard(D.sc());
+  }
+
+  // ══════════════════════════════════════════
   // PUBLIC API
   // ══════════════════════════════════════════
 
@@ -552,7 +616,8 @@ const SessionIO = (function(){
     validateRoundPayload: validateRoundPayload,
     migrateRoundPayload: migrateRoundPayload,
     normalizeRoundPayload: normalizeRoundPayload,
-    rebuildDerivedState: rebuildDerivedState
+    rebuildDerivedState: rebuildDerivedState,
+    getCurrentRound: getCurrentRound
   };
 
 })();

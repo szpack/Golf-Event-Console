@@ -335,24 +335,62 @@ const CoursePicker = (function(){
 
   /**
    * Apply round data to v4 data layer and rebuild S.
+   *
+   * v15: 经过 Round.createRound() 中间层生成 Round 对象，
+   *      用它驱动 course 引用 + meta (roundId / createdAt)。
+   *      holeSnapshot、players scores 清空等仍走现有逻辑。
+   *      Round 模块不可用时 graceful fallback 到原始逻辑。
+   *
+   * @param {Object} rmRound - RoundManager.createRoundFromRouting() 返回的导航状态对象
+   * @param {Array}  orderedHoles - CourseDatabase 返回的洞数据 [{ par, yard, holeId }]
    */
-  function _applyRoundToState(round, orderedHoles){
+  function _applyRoundToState(rmRound, orderedHoles){
     const sc = D.sc();
     const ws = D.ws();
+    const count = orderedHoles.length;
 
-    // Update course snapshot
-    sc.course.clubId = round.clubId;
-    sc.course.clubName = round.clubName;
-    sc.course.routingId = round.routingId;
-    sc.course.routingName = round.routingName;
-    sc.course.routingSourceType = round.routingSourceType;
-    sc.course.routingMeta = round.routingMeta || {};
-    sc.course.courseName = round.clubName + ' · ' + round.routingName;
+    // ── v15: 通过 Round.createRound() 生成 Round 对象 ──
+    var roundObj = null;
+    if(typeof Round !== 'undefined'){
+      // 构建 holeSnapshot 供 Round 桥接
+      var snapshot = Array.from({length:count}, function(_,i){
+        var oh = orderedHoles[i];
+        return { number:i+1, par:oh.par, yards:oh.yard, holeId:oh.holeId||null };
+      });
+      // 收集现有球员用于 Round 初始化
+      var playerInputs = (sc.players || []).map(function(p){
+        return {
+          roundPlayerId: D.rpid(p),
+          playerId: p.playerId || null,
+          name: p.name || '',
+          team: p.teamId || '',
+          color: p.colorKey || ''
+        };
+      });
+      roundObj = Round.createRound({
+        courseId:   rmRound.clubId,
+        routingId: rmRound.routingId,
+        holeCount: count,
+        status:    'playing',
+        players:   playerInputs,
+        _courseSnapshot: snapshot
+      });
+      console.log('[CoursePicker] Round created (id=' + roundObj.id + ', holes=' + count + ')');
+    }
+
+    // ── Write course snapshot to D.sc() ──
+    // Course 引用字段：优先从 roundObj 取，fallback 到 rmRound
+    sc.course.clubId            = roundObj ? roundObj.courseId  : rmRound.clubId;
+    sc.course.routingId         = roundObj ? roundObj.routingId : rmRound.routingId;
+    sc.course.clubName          = rmRound.clubName;
+    sc.course.routingName       = rmRound.routingName;
+    sc.course.routingSourceType = rmRound.routingSourceType;
+    sc.course.routingMeta       = rmRound.routingMeta || {};
+    sc.course.courseName        = rmRound.clubName + ' · ' + rmRound.routingName;
 
     // Cache routing for restore
-    S._activeRouting = round._routing || null;
+    S._activeRouting = rmRound._routing || null;
 
-    const count = orderedHoles.length;
     sc.course.holeCount = count;
     sc.course.holeSnapshot = Array.from({length:count}, function(_,i){
       var oh = orderedHoles[i];
@@ -363,6 +401,13 @@ const CoursePicker = (function(){
         holeId: oh.holeId || null
       };
     });
+
+    // ── Write meta from Round ──
+    if(roundObj){
+      sc.meta.roundId   = roundObj.id;
+      sc.meta.createdAt = roundObj.createdAt;
+      sc.meta.updatedAt = roundObj.updatedAt;
+    }
 
     // Reset workspace
     ws.currentHole = 0;
