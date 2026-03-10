@@ -64,7 +64,7 @@ GolfOverlay/
 │   └── app.js          # 应用核心（Overlay Center 逻辑）
 ├── assets/
 │   └── icons/          # 图标资源（备用）
-├── bkimg.jpeg          # 默认背景图
+├── images/             # 图片资源（logo、示例背景图等）
 ├── archive/            # 历史版本存档（index-4.x / 5.x）
 ├── docs/               # 设计文档（功能说明书 / 视觉设计 / 架构说明）
 └── CLAUDE.md           # 本文件

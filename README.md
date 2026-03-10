@@ -168,6 +168,10 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 ## Changelog
 
+### v23.13.2 — 2026-03-10
+- **修复 Broadcast 默认背景图显示**：无用户背景时保持画布透明，不再加载默认 bkimg
+- **图片资源迁移**：所有根目录图片移至 `images/` 目录（gologo.png、bkimg 系列等）
+
 ### v23.13.1 — 2026-03-10
 - **修复 playerHistory 格式不一致**：app.js 存字符串、newRoundService 存对象，统一为 `{name, playerId}` 格式
 - **getRecentPlayers 兼容两种格式**：新旧格式混存时自动标准化，确保 BuddyPicker 正确展示历史球友

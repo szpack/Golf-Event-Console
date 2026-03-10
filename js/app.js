@@ -889,6 +889,17 @@ const STRINGS = {
     pleaseLoginToBook: '请登录后预订',
     bookingConfirm: '确认您的预订？',
     bookingSuccess: '预订成功！',
+    // TeeTime Card
+    noTeeTimesFound: '未找到开球时间',
+    tryAdjustFilters: '尝试调整筛选条件',
+    full: '已满',
+    spotsLeft: '个名额',
+    book: '预订',
+    call: '电话',
+    startRound: '开始球局',
+    callToBook: '请致电预订',
+    externalBooking: '将跳转到外部预订页面',
+    redirectToMemberPortal: '将跳转到会员门户',
   },
   ja:{
     holeHero:h=>`ホール ${h}`, holeLbl:'HOLE', parLabel:p=>`パー ${p}`,
@@ -2204,7 +2215,7 @@ function applyLang(){
 // DATA MODEL — v4.0
 // All business data lives in D (data.js). S is a legacy compatibility view.
 // ============================================================
-const DEFAULT_BG = './bkimg.jpeg';
+const DEFAULT_BG = null;  // No default background — broadcast canvas is transparent
 const LS_KEY = 'golf_v531';       // legacy key, kept for migration
 const SESSION_ID = D.SESSION;     // re-export for compat
 
@@ -2494,12 +2505,19 @@ function confirmCourseEdit(){
 function applyBg(){
   const img=document.getElementById('bg-img');
   const hint=document.getElementById('upload-hint');
-  // Always set onerror BEFORE src to catch any load failure (including cached failures)
-  img.onerror=()=>{ img.onerror=null; img.style.display='none'; hint.classList.remove('hidden'); };
-  img.src=S.userBg||DEFAULT_BG;
+  var src=S.userBg||DEFAULT_BG;
+  if(!src){
+    // No background — hide image, show upload hint
+    img.style.display='none';
+    img.removeAttribute('src');
+    if(hint) hint.classList.remove('hidden');
+    return;
+  }
+  img.onerror=()=>{ img.onerror=null; img.style.display='none'; if(hint) hint.classList.remove('hidden'); };
+  img.src=src;
   img.style.display='block';
   img.style.opacity=S.bgOpacity;
-  hint.classList.add('hidden');
+  if(hint) hint.classList.add('hidden');
 }
 function setBgFile(file){
   if(!file||!file.type.startsWith('image/')) return;
@@ -2727,14 +2745,13 @@ function gotoPrevHole(){
   render(); scheduleSave();
 }
 
-const RATIO_BG={'16:9':'./bkimg.jpeg','9:16':'./bkimg-9-16.jpg','1:1':'./bkimg-1-1.jpg'};
+const RATIO_BG={'16:9':'./images/bkimg.jpeg','9:16':'./images/bkimg-9-16.jpg','1:1':'./images/bkimg-1-1.jpg'};
 
 function setRatio(r){
   S.ratio=r; D.ws().ratio=r;
   document.querySelectorAll('.ratio-btn').forEach(b=>b.classList.toggle('active',b.dataset.ratio===r));
   if(!S.userBg){
-    const bgEl=document.getElementById('bg-img');
-    if(bgEl){ bgEl.src=RATIO_BG[r]||DEFAULT_BG; bgEl.style.display='block'; }
+    // No default bg — just keep canvas transparent when switching ratio
   }
   const dw=D.defWorkspace();
   S.overlayPos[r]=dw.overlayPos[r];

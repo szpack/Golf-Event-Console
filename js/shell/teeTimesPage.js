@@ -1,544 +1,554 @@
 // ============================================================
-// teeTimesPage.js — TeeTimes Page (GolfHub)
-// Page: Header + Intent Bar + Results Area
-// Intent Bar: Where / When / Players / Access
+// teeTimesPage.js — TeeTimes Booking Page (重构版)
+// Route: #/teetimes
+// Phase 1: 完整实现
 // ============================================================
 
 const TeeTimesPage = (function(){
 
-  // ══════════════════════════════════════════
-  // STATE
-  // ══════════════════════════════════════════
+  // Mock 数据
+  var _courses = [
+    { id: 'shahe', name: '沙河高尔夫球会', location: '深圳南山', price: 520, image: 'images/bkimg.jpeg' },
+    { id: 'xili', name: '西丽高尔夫乡村俱乐部', location: '深圳南山', price: 480, image: 'images/bkimg-9-16.jpg' },
+    { id: 'mission', name: '观澜湖高尔夫球会', location: '深圳龙华', price: 1280, image: 'images/bkimg-1-1.jpg' }
+  ];
 
+  var _areas = [
+    { id: 'shenzhen', name: '深圳' },
+    { id: 'guangzhou', name: '广州' },
+    { id: 'dongguan', name: '东莞' }
+  ];
+
+  // Mock TeeTime 数据
+  var _teeTimes = [
+    {
+      id: 'tt_001',
+      courseId: 'shahe',
+      courseName: '沙河高尔夫球会',
+      courseRouting: 'A/B 场',
+      date: '2026-03-10',
+      time: '07:30',
+      availableSlots: 2,
+      capacity: 4,
+      accessLevel: 'member',
+      accessLabel: '会员',
+      displayPrice: 520,
+      currency: 'CNY',
+      priceNote: '会员价',
+      bookingMethod: 'member_portal',
+      bookingLabel: '会员门户预订',
+      restrictions: [],
+      meta: ['含球车', '不可取消']
+    },
+    {
+      id: 'tt_002',
+      courseId: 'shahe',
+      courseName: '沙河高尔夫球会',
+      courseRouting: 'A/B 场',
+      date: '2026-03-10',
+      time: '08:30',
+      availableSlots: 4,
+      capacity: 4,
+      accessLevel: 'public',
+      accessLabel: '公开',
+      displayPrice: 880,
+      currency: 'CNY',
+      priceNote: '公开价',
+      bookingMethod: 'external_link',
+      bookingLabel: '在线预订',
+      restrictions: [],
+      meta: ['含球车']
+    },
+    {
+      id: 'tt_003',
+      courseId: 'xili',
+      courseName: '西丽高尔夫乡村俱乐部',
+      courseRouting: 'A 场',
+      date: '2026-03-10',
+      time: '09:00',
+      availableSlots: 1,
+      capacity: 4,
+      accessLevel: 'member',
+      accessLabel: '会员',
+      displayPrice: 480,
+      currency: 'CNY',
+      priceNote: '会员价',
+      bookingMethod: 'phone',
+      bookingLabel: '电话预订',
+      restrictions: ['仅限会员'],
+      meta: ['需提前1天']
+    },
+    {
+      id: 'tt_004',
+      courseId: 'mission',
+      courseName: '观澜湖高尔夫球会',
+      courseRouting: '世界杯球场',
+      date: '2026-03-10',
+      time: '10:30',
+      availableSlots: 3,
+      capacity: 4,
+      accessLevel: 'public',
+      accessLabel: '公开',
+      displayPrice: 1280,
+      currency: 'CNY',
+      priceNote: '周末价',
+      bookingMethod: 'external_link',
+      bookingLabel: '在线预订',
+      restrictions: [],
+      meta: ['含球车', '含球童']
+    },
+    {
+      id: 'tt_005',
+      courseId: 'shahe',
+      courseName: '沙河高尔夫球会',
+      courseRouting: 'C 场',
+      date: '2026-03-10',
+      time: '13:00',
+      availableSlots: 0,
+      capacity: 4,
+      accessLevel: 'public',
+      accessLabel: '公开',
+      displayPrice: 680,
+      currency: 'CNY',
+      priceNote: '下午场',
+      bookingMethod: 'display_only',
+      bookingLabel: '已满',
+      restrictions: ['已售罄'],
+      meta: []
+    },
+    {
+      id: 'tt_006',
+      courseId: 'xili',
+      courseName: '西丽高尔夫乡村俱乐部',
+      courseRouting: 'B 场',
+      date: '2026-03-10',
+      time: '14:30',
+      availableSlots: 2,
+      capacity: 4,
+      accessLevel: 'guest',
+      accessLabel: '会员带客',
+      displayPrice: 680,
+      currency: 'CNY',
+      priceNote: '嘉宾价',
+      bookingMethod: 'phone',
+      bookingLabel: '电话预订',
+      restrictions: ['需会员陪同'],
+      meta: ['含球车']
+    }
+  ];
+
+  // 状态
   var _state = {
-    where: null,        // { type: 'city'|'course', value: string, label: string }
-    when: null,         // { type: 'today'|'tomorrow'|'weekend'|'date', date: Date, label: string }
-    players: 2,         // 1-4
-    access: 'all'       // 'all' | 'public' | 'member'
+    where: { type: 'area', id: 'shenzhen', name: '深圳' },
+    when: { preset: 'today', date: _formatDate(new Date()) },
+    players: 2,
+    access: 'all'
   };
 
   var _ui = {
-    showWhereDropdown: false,
-    showWhenDropdown: false,
-    showPlayersDropdown: false,
-    showAccessDropdown: false
+    openField: null
   };
 
-  // Mock data for cities and courses
-  var _mockLocations = [
-    { type: 'city', value: 'los-angeles', label: 'Los Angeles, CA' },
-    { type: 'city', value: 'san-diego', label: 'San Diego, CA' },
-    { type: 'city', value: 'san-francisco', label: 'San Francisco, CA' },
-    { type: 'city', value: 'las-vegas', label: 'Las Vegas, NV' },
-    { type: 'city', value: 'phoenix', label: 'Phoenix, AZ' },
-    { type: 'course', value: 'course-1', label: 'Torrey Pines North', city: 'San Diego' },
-    { type: 'course', value: 'course-2', label: 'Torrey Pines South', city: 'San Diego' },
-    { type: 'course', value: 'course-3', label: 'Pebble Beach Golf Links', city: 'Pebble Beach' },
-    { type: 'course', value: 'course-4', label: 'Spyglass Hill', city: 'Del Monte Forest' },
-    { type: 'course', value: 'course-5', label: 'TPC Sawgrass', city: 'Ponte Vedra Beach' }
-  ];
-
-  // ══════════════════════════════════════════
-  // INIT
-  // ══════════════════════════════════════════
-
-  function init(){
-    // Set default "when" to today
-    var today = new Date();
-    _state.when = {
-      type: 'today',
-      date: today,
-      label: formatDateLabel(today, 'today')
-    };
+  // 工具函数
+  function _formatDate(d){
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
 
-  // ══════════════════════════════════════════
-  // RENDER
-  // ══════════════════════════════════════════
+  function _getDisplayDate(){
+    if(_state.when.preset === 'today') return T('today');
+    if(_state.when.preset === 'tomorrow') return T('tomorrow');
+    if(_state.when.preset === 'weekend') return T('thisWeekend');
+    return _state.when.date;
+  }
 
+  function _filterTeeTimes(){
+    return _teeTimes.filter(function(tt){
+      // Access filter
+      if(_state.access !== 'all' && tt.accessLevel !== _state.access){
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // 渲染主页面
   function render(){
     var el = document.getElementById('page-teetimes-content');
     if(!el) return;
 
-    // Check auth (optional - TeeTimes can be browsed without login)
-    // if(!Shell.requireAuth('page-teetimes-content')) return;
-
     var html = '';
 
-    // ── Page Header ──
-    html += '<div class="tt-page-header">';
-    html += '<h1 class="tt-page-title">' + T('teetimesTitle', 'Find Tee Times') + '</h1>';
+    // 页面头部
+    html += '<div class="sh-page-header">';
+    html += '<h1 class="sh-page-title">' + T('teeTimesTitle') + '</h1>';
+    html += '<p class="sh-page-subtitle">' + T('teeTimesSubtitle') + '</p>';
     html += '</div>';
 
-    // ── Intent Bar ──
-    html += _renderIntentBar();
+    // Intent Bar
+    html += '<div class="tt-intent-bar">';
+    html += _renderWhereField();
+    html += _renderWhenField();
+    html += _renderPlayersField();
+    html += _renderAccessField();
+    html += '</div>';
 
-    // ── Results Area (Placeholder) ──
-    html += _renderResultsArea();
+    // 展开的面板
+    if(_ui.openField){
+      html += '<div class="tt-intent-panel">';
+      html += _renderOpenPanel();
+      html += '</div>';
+    }
+
+    // 结果列表
+    var filtered = _filterTeeTimes();
+    html += _renderResults(filtered);
 
     el.innerHTML = html;
-
-    // Wire up document click to close dropdowns
-    _wireDocumentClick();
+    _wireEvents();
   }
 
-  // ══════════════════════════════════════════
-  // INTENT BAR
-  // ══════════════════════════════════════════
-
-  function _renderIntentBar(){
-    var html = '<div class="tt-intent-bar">';
-
-    // Where field
-    html += _renderWhereField();
-
-    // When field
-    html += _renderWhenField();
-
-    // Players field
-    html += _renderPlayersField();
-
-    // Access field
-    html += _renderAccessField();
-
-    // Search button
-    html += '<button class="tt-search-btn" onclick="TeeTimesPage.search()">';
-    html += '<span class="tt-search-icon">&#128269;</span>';
-    html += '<span class="tt-search-label">' + T('searchBtn', 'Search') + '</span>';
-    html += '</button>';
-
-    html += '</div>';
-    return html;
-  }
-
-  // ── Where Field ──
+  // Intent Bar 字段
   function _renderWhereField(){
-    var label = _state.where ? _state.where.label : T('wherePh', 'Where?');
-    var hasValue = !!_state.where;
-    var activeClass = _ui.showWhereDropdown ? ' tt-field-active' : '';
-    var filledClass = hasValue ? ' tt-field-filled' : '';
-
-    var html = '<div class="tt-intent-field' + activeClass + filledClass + '" id="tt-field-where">';
-    html += '<div class="tt-field-inner" onclick="TeeTimesPage.toggleWhere()">';
-    html += '<div class="tt-field-label">' + T('whereLabel', 'Where') + '</div>';
-    html += '<div class="tt-field-value">' + label + '</div>';
-    html += '<div class="tt-field-arrow">&#9662;</div>';
-    html += '</div>';
-
-    // Dropdown
-    if(_ui.showWhereDropdown){
-      html += '<div class="tt-dropdown">';
-      html += '<div class="tt-dropdown-section">';
-      html += '<div class="tt-dropdown-title">' + T('citiesLabel', 'Cities') + '</div>';
-      _mockLocations.filter(function(l){ return l.type === 'city'; }).forEach(function(loc){
-        var selected = _state.where && _state.where.value === loc.value ? ' tt-dropdown-item-selected' : '';
-        html += '<div class="tt-dropdown-item' + selected + '" onclick="TeeTimesPage.selectWhere(' + JSON.stringify(loc).replace(/"/g, '&quot;') + ')">';
-        html += '<span class="tt-dropdown-icon">&#127969;</span>';
-        html += '<span class="tt-dropdown-text">' + loc.label + '</span>';
-        html += '</div>';
-      });
-      html += '</div>';
-      html += '<div class="tt-dropdown-section">';
-      html += '<div class="tt-dropdown-title">' + T('coursesLabel', 'Courses') + '</div>';
-      _mockLocations.filter(function(l){ return l.type === 'course'; }).forEach(function(loc){
-        var selected = _state.where && _state.where.value === loc.value ? ' tt-dropdown-item-selected' : '';
-        html += '<div class="tt-dropdown-item' + selected + '" onclick="TeeTimesPage.selectWhere(' + JSON.stringify(loc).replace(/"/g, '&quot;') + ')">';
-        html += '<span class="tt-dropdown-icon">&#9971;</span>';
-        html += '<span class="tt-dropdown-text">' + loc.label + '</span>';
-        html += '<span class="tt-dropdown-meta">' + loc.city + '</span>';
-        html += '</div>';
-      });
-      html += '</div>';
-      html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
+    var active = _ui.openField === 'where' ? ' tt-field-active' : '';
+    var value = _state.where ? _state.where.name : T('selectLocation');
+    return '<div class="tt-intent-field' + active + '" data-field="where">' +
+           '<label>' + T('where') + '</label>' +
+           '<span class="tt-field-value">' + value + '</span>' +
+           '<span class="tt-field-arrow">▼</span>' +
+           '</div>';
   }
 
-  // ── When Field ──
   function _renderWhenField(){
-    var label = _state.when ? _state.when.label : T('whenPh', 'When?');
-    var hasValue = !!_state.when;
-    var activeClass = _ui.showWhenDropdown ? ' tt-field-active' : '';
-    var filledClass = hasValue ? ' tt-field-filled' : '';
-
-    var html = '<div class="tt-intent-field' + activeClass + filledClass + '" id="tt-field-when">';
-    html += '<div class="tt-field-inner" onclick="TeeTimesPage.toggleWhen()">';
-    html += '<div class="tt-field-label">' + T('whenLabel', 'When') + '</div>';
-    html += '<div class="tt-field-value">' + label + '</div>';
-    html += '<div class="tt-field-arrow">&#9662;</div>';
-    html += '</div>';
-
-    // Dropdown
-    if(_ui.showWhenDropdown){
-      html += '<div class="tt-dropdown tt-dropdown-wide">';
-
-      // Quick options
-      html += '<div class="tt-dropdown-section">';
-      html += '<div class="tt-dropdown-title">' + T('quickDatesLabel', 'Quick Select') + '</div>';
-
-      var quickOptions = [
-        { type: 'today', label: T('todayLabel', 'Today') },
-        { type: 'tomorrow', label: T('tomorrowLabel', 'Tomorrow') },
-        { type: 'weekend', label: T('thisWeekendLabel', 'This Weekend') }
-      ];
-
-      quickOptions.forEach(function(opt){
-        var selected = _state.when && _state.when.type === opt.type ? ' tt-dropdown-item-selected' : '';
-        html += '<div class="tt-dropdown-item' + selected + '" onclick="TeeTimesPage.selectWhenType(\'' + opt.type + '\')">';
-        html += '<span class="tt-dropdown-text">' + opt.label + '</span>';
-        html += '</div>';
-      });
-      html += '</div>';
-
-      // Calendar placeholder
-      html += '<div class="tt-dropdown-section">';
-      html += '<div class="tt-dropdown-title">' + T('pickDateLabel', 'Pick a Date') + '</div>';
-      html += _renderMiniCalendar();
-      html += '</div>';
-
-      html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
+    var active = _ui.openField === 'when' ? ' tt-field-active' : '';
+    var value = _getDisplayDate();
+    return '<div class="tt-intent-field' + active + '" data-field="when">' +
+           '<label>' + T('when') + '</label>' +
+           '<span class="tt-field-value">' + value + '</span>' +
+           '<span class="tt-field-arrow">▼</span>' +
+           '</div>';
   }
 
-  // ── Mini Calendar ──
-  function _renderMiniCalendar(){
-    var today = new Date();
-    var currentMonth = today.getMonth();
-    var currentYear = today.getFullYear();
-
-    var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    var dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-    var html = '<div class="tt-calendar">';
-
-    // Header
-    html += '<div class="tt-calendar-header">';
-    html += '<button class="tt-calendar-nav" onclick="event.stopPropagation();">&#9664;</button>';
-    html += '<span class="tt-calendar-month">' + monthNames[currentMonth] + ' ' + currentYear + '</span>';
-    html += '<button class="tt-calendar-nav" onclick="event.stopPropagation();">&#9654;</button>';
-    html += '</div>';
-
-    // Day headers
-    html += '<div class="tt-calendar-days">';
-    dayNames.forEach(function(d){
-      html += '<div class="tt-calendar-day-header">' + d + '</div>';
-    });
-    html += '</div>';
-
-    // Calendar grid
-    var firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    var daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-    html += '<div class="tt-calendar-grid">';
-
-    // Empty cells for days before the 1st
-    for(var i = 0; i < firstDay; i++){
-      html += '<div class="tt-calendar-cell tt-calendar-cell-empty"></div>';
-    }
-
-    // Days
-    for(var day = 1; day <= daysInMonth; day++){
-      var date = new Date(currentYear, currentMonth, day);
-      var isToday = isSameDate(date, today);
-      var isSelected = _state.when && isSameDate(date, _state.when.date);
-      var isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-      var cellClass = 'tt-calendar-cell';
-      if(isToday) cellClass += ' tt-calendar-cell-today';
-      if(isSelected) cellClass += ' tt-calendar-cell-selected';
-      if(isPast) cellClass += ' tt-calendar-cell-past';
-
-      var onclick = isPast ? '' : ' onclick="TeeTimesPage.selectWhenDate(' + date.getTime() + ')"';
-
-      html += '<div class="' + cellClass + '"' + onclick + '>';
-      html += '<span class="tt-calendar-day-num">' + day + '</span>';
-      html += '</div>';
-    }
-
-    html += '</div>';
-    html += '</div>';
-
-    return html;
-  }
-
-  // ── Players Field ──
   function _renderPlayersField(){
-    var label = _state.players + ' ' + (_state.players === 1 ? T('playerSingular', 'Player') : T('playerPlural', 'Players'));
-    var activeClass = _ui.showPlayersDropdown ? ' tt-field-active' : '';
-    var filledClass = ' tt-field-filled';
-
-    var html = '<div class="tt-intent-field' + activeClass + filledClass + '" id="tt-field-players">';
-    html += '<div class="tt-field-inner" onclick="TeeTimesPage.togglePlayers()">';
-    html += '<div class="tt-field-label">' + T('playersLabel', 'Players') + '</div>';
-    html += '<div class="tt-field-value">' + label + '</div>';
-    html += '<div class="tt-field-arrow">&#9662;</div>';
-    html += '</div>';
-
-    // Dropdown
-    if(_ui.showPlayersDropdown){
-      html += '<div class="tt-dropdown tt-dropdown-narrow">';
-      html += '<div class="tt-dropdown-section">';
-
-      for(var p = 1; p <= 4; p++){
-        var selected = _state.players === p ? ' tt-dropdown-item-selected' : '';
-        var playerLabel = p + ' ' + (p === 1 ? T('playerSingular', 'Player') : T('playerPlural', 'Players'));
-        html += '<div class="tt-dropdown-item' + selected + '" onclick="TeeTimesPage.selectPlayers(' + p + ')">';
-        html += '<span class="tt-dropdown-text">' + playerLabel + '</span>';
-        html += '</div>';
-      }
-
-      html += '</div>';
-      html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
+    var active = _ui.openField === 'players' ? ' tt-field-active' : '';
+    return '<div class="tt-intent-field' + active + '" data-field="players">' +
+           '<label>' + T('players') + '</label>' +
+           '<span class="tt-field-value">' + _state.players + ' ' + T('people') + '</span>' +
+           '<span class="tt-field-arrow">▼</span>' +
+           '</div>';
   }
 
-  // ── Access Field ──
   function _renderAccessField(){
-    var accessLabels = {
-      all: T('accessAll', 'All Tee Times'),
-      public: T('accessPublic', 'Public'),
-      member: T('accessMember', 'Member')
-    };
-    var label = accessLabels[_state.access] || accessLabels.all;
-    var activeClass = _ui.showAccessDropdown ? ' tt-field-active' : '';
-    var filledClass = ' tt-field-filled';
+    var active = _ui.openField === 'access' ? ' tt-field-active' : '';
+    var labels = { all: T('all'), public: T('public'), member: T('member') };
+    return '<div class="tt-intent-field' + active + '" data-field="access">' +
+           '<label>' + T('access') + '</label>' +
+           '<span class="tt-field-value">' + labels[_state.access] + '</span>' +
+           '<span class="tt-field-arrow">▼</span>' +
+           '</div>';
+  }
 
-    var html = '<div class="tt-intent-field' + activeClass + filledClass + '" id="tt-field-access">';
-    html += '<div class="tt-field-inner" onclick="TeeTimesPage.toggleAccess()">';
-    html += '<div class="tt-field-label">' + T('accessLabel', 'Access') + '</div>';
-    html += '<div class="tt-field-value">' + label + '</div>';
-    html += '<div class="tt-field-arrow">&#9662;</div>';
-    html += '</div>';
-
-    // Dropdown
-    if(_ui.showAccessDropdown){
-      html += '<div class="tt-dropdown tt-dropdown-narrow">';
-      html += '<div class="tt-dropdown-section">';
-
-      var options = [
-        { key: 'all', label: accessLabels.all, icon: '&#127758;' },
-        { key: 'public', label: accessLabels.public, icon: '&#128101;' },
-        { key: 'member', label: accessLabels.member, icon: '&#128273;' }
-      ];
-
-      options.forEach(function(opt){
-        var selected = _state.access === opt.key ? ' tt-dropdown-item-selected' : '';
-        html += '<div class="tt-dropdown-item' + selected + '" onclick="TeeTimesPage.selectAccess(\'' + opt.key + '\')">';
-        html += '<span class="tt-dropdown-icon">' + opt.icon + '</span>';
-        html += '<span class="tt-dropdown-text">' + opt.label + '</span>';
-        html += '</div>';
-      });
-
-      html += '</div>';
-      html += '</div>';
+  // 展开面板
+  function _renderOpenPanel(){
+    switch(_ui.openField){
+      case 'where': return _renderWherePanel();
+      case 'when': return _renderWhenPanel();
+      case 'players': return _renderPlayersPanel();
+      case 'access': return _renderAccessPanel();
+      default: return '';
     }
+  }
 
+  function _renderWherePanel(){
+    var html = '<div class="tt-panel-title">' + T('selectLocation') + '</div>';
+    html += '<div class="tt-where-options">';
+    html += '<div class="tt-where-section">';
+    html += '<div class="tt-where-section-title">' + T('areas') + '</div>';
+    for(var i = 0; i < _areas.length; i++){
+      var a = _areas[i];
+      var selected = _state.where.type === 'area' && _state.where.id === a.id ? ' tt-option-selected' : '';
+      html += '<div class="tt-where-option' + selected + '" data-type="area" data-id="' + a.id + '" data-name="' + a.name + '">' + a.name + '</div>';
+    }
+    html += '</div>';
+    html += '<div class="tt-where-section">';
+    html += '<div class="tt-where-section-title">' + T('courses') + '</div>';
+    for(var i = 0; i < _courses.length; i++){
+      var c = _courses[i];
+      var selected = _state.where.type === 'course' && _state.where.id === c.id ? ' tt-option-selected' : '';
+      html += '<div class="tt-where-option' + selected + '" data-type="course" data-id="' + c.id + '" data-name="' + c.name + '">' + 
+              '<span>' + c.name + '</span>' +
+              '<span class="tt-where-price">$' + c.price + '</span>' +
+              '</div>';
+    }
+    html += '</div>';
     html += '</div>';
     return html;
   }
 
-  // ══════════════════════════════════════════
-  // RESULTS AREA (Placeholder)
-  // ══════════════════════════════════════════
+  function _renderWhenPanel(){
+    var html = '<div class="tt-panel-title">' + T('selectDate') + '</div>';
+    html += '<div class="tt-when-presets">';
+    var presets = [
+      { id: 'today', label: T('today') },
+      { id: 'tomorrow', label: T('tomorrow') },
+      { id: 'weekend', label: T('thisWeekend') }
+    ];
+    for(var i = 0; i < presets.length; i++){
+      var p = presets[i];
+      var selected = _state.when.preset === p.id ? ' tt-option-selected' : '';
+      html += '<button class="tt-when-preset' + selected + '" data-preset="' + p.id + '">' + p.label + '</button>';
+    }
+    html += '</div>';
+    html += '<div class="tt-when-calendar">';
+    html += '<div class="tt-calendar-title">' + T('pickDate') + '</div>';
+    html += '<div class="tt-calendar-grid">';
+    for(var i = 0; i < 14; i++){
+      var d = new Date();
+      d.setDate(d.getDate() + i);
+      var dateStr = _formatDate(d);
+      var dayLabel = d.getDate();
+      var selected = _state.when.date === dateStr && !_state.when.preset ? ' tt-calendar-day-selected' : '';
+      html += '<div class="tt-calendar-day' + selected + '" data-date="' + dateStr + '">' + dayLabel + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
 
-  function _renderResultsArea(){
-    var html = '<div class="tt-results-area">';
+  function _renderPlayersPanel(){
+    var html = '<div class="tt-panel-title">' + T('selectPlayers') + '</div>';
+    html += '<div class="tt-players-options">';
+    for(var i = 1; i <= 4; i++){
+      var selected = _state.players === i ? ' tt-option-selected' : '';
+      html += '<button class="tt-players-option' + selected + '" data-players="' + i + '">' + i + ' ' + T('people') + '</button>';
+    }
+    html += '</div>';
+    return html;
+  }
 
-    // Results header
-    html += '<div class="tt-results-header">';
-    html += '<div class="tt-results-count">' + T('resultsPlaceholder', 'Enter search criteria to find tee times') + '</div>';
+  function _renderAccessPanel(){
+    var html = '<div class="tt-panel-title">' + T('selectAccess') + '</div>';
+    html += '<div class="tt-access-options">';
+    var options = [
+      { id: 'all', label: T('allAccess') },
+      { id: 'public', label: T('publicOnly') },
+      { id: 'member', label: T('memberOnly') }
+    ];
+    for(var i = 0; i < options.length; i++){
+      var o = options[i];
+      var selected = _state.access === o.id ? ' tt-option-selected' : '';
+      html += '<button class="tt-access-option' + selected + '" data-access="' + o.id + '">' + o.label + '</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // 结果列表
+  function _renderResults(teeTimes){
+    var html = '';
+    
+    // 结果摘要
+    html += '<div class="tt-results-summary">';
+    html += '<span>' + teeTimes.length + ' ' + T('teeTimesFound') + '</span>';
+    html += '<span class="tt-summary-filters">' + _getDisplayDate() + ' · ' + _state.players + ' ' + T('people') + '</span>';
     html += '</div>';
 
-    // Results list placeholder
+    // 结果列表
     html += '<div class="tt-results-list">';
-    html += '<div class="tt-results-empty">';
-    html += '<div class="tt-results-empty-icon">&#9971;</div>';
-    html += '<div class="tt-results-empty-title">' + T('readyToSearchTitle', 'Ready to Find Tee Times') + '</div>';
-    html += '<div class="tt-results-empty-text">' + T('readyToSearchText', 'Use the filters above to search for available tee times at your favorite courses.') + '</div>';
-    html += '</div>';
+    if(teeTimes.length === 0){
+      html += '<div class="tt-empty-state">';
+      html += '<div class="tt-empty-icon">&#128339;</div>';
+      html += '<div class="tt-empty-title">' + T('noTeeTimesFound') + '</div>';
+      html += '<div class="tt-empty-text">' + T('tryAdjustFilters') + '</div>';
+      html += '</div>';
+    } else {
+      for(var i = 0; i < teeTimes.length; i++){
+        html += _renderTeeTimeCard(teeTimes[i]);
+      }
+    }
     html += '</div>';
 
-    html += '</div>';
     return html;
   }
 
-  // ══════════════════════════════════════════
-  // INTERACTION HANDLERS
-  // ══════════════════════════════════════════
-
-  // ── Where ──
-  function toggleWhere(){
-    _closeAllDropdowns();
-    _ui.showWhereDropdown = !_ui.showWhereDropdown;
-    render();
-  }
-
-  function selectWhere(location){
-    _state.where = location;
-    _ui.showWhereDropdown = false;
-    render();
-  }
-
-  // ── When ──
-  function toggleWhen(){
-    _closeAllDropdowns();
-    _ui.showWhenDropdown = !_ui.showWhenDropdown;
-    render();
-  }
-
-  function selectWhenType(type){
-    var date = new Date();
-
-    if(type === 'tomorrow'){
-      date.setDate(date.getDate() + 1);
-    } else if(type === 'weekend'){
-      // Find next Saturday
-      var daysUntilSaturday = (6 - date.getDay() + 7) % 7;
-      if(daysUntilSaturday === 0) daysUntilSaturday = 7; // If today is Saturday, go to next week
-      date.setDate(date.getDate() + daysUntilSaturday);
-    }
-
-    _state.when = {
-      type: type,
-      date: date,
-      label: formatDateLabel(date, type)
+  // TeeTime Card
+  function _renderTeeTimeCard(tt){
+    var accessColors = {
+      public: 'tt-access-public',
+      member: 'tt-access-member',
+      guest: 'tt-access-guest',
+      limited: 'tt-access-limited',
+      private: 'tt-access-private'
     };
-    _ui.showWhenDropdown = false;
-    render();
-  }
+    var accessClass = accessColors[tt.accessLevel] || 'tt-access-default';
+    
+    var isFull = tt.availableSlots === 0;
+    var availabilityText = isFull ? T('full') : (tt.availableSlots + ' ' + T('spotsLeft'));
+    var availabilityClass = isFull ? 'tt-avail-full' : (tt.availableSlots <= 2 ? 'tt-avail-low' : 'tt-avail-open');
 
-  function selectWhenDate(timestamp){
-    var date = new Date(timestamp);
-    _state.when = {
-      type: 'date',
-      date: date,
-      label: formatDateLabel(date, 'date')
-    };
-    _ui.showWhenDropdown = false;
-    render();
-  }
-
-  // ── Players ──
-  function togglePlayers(){
-    _closeAllDropdowns();
-    _ui.showPlayersDropdown = !_ui.showPlayersDropdown;
-    render();
-  }
-
-  function selectPlayers(count){
-    _state.players = count;
-    _ui.showPlayersDropdown = false;
-    render();
-  }
-
-  // ── Access ──
-  function toggleAccess(){
-    _closeAllDropdowns();
-    _ui.showAccessDropdown = !_ui.showAccessDropdown;
-    render();
-  }
-
-  function selectAccess(access){
-    _state.access = access;
-    _ui.showAccessDropdown = false;
-    render();
-  }
-
-  // ── Search ──
-  function search(){
-    console.log('[TeeTimesPage] Search with state:', JSON.parse(JSON.stringify(_state)));
-    // TODO: Implement search in Step 5 (TeeTime Card)
-    alert('Search functionality will be implemented in Step 5 (TeeTime Card)');
-  }
-
-  // ══════════════════════════════════════════
-  // HELPERS
-  // ══════════════════════════════════════════
-
-  function _closeAllDropdowns(){
-    _ui.showWhereDropdown = false;
-    _ui.showWhenDropdown = false;
-    _ui.showPlayersDropdown = false;
-    _ui.showAccessDropdown = false;
-  }
-
-  function _wireDocumentClick(){
-    // Remove existing listener to avoid duplicates
-    document.removeEventListener('click', _onDocumentClick);
-    // Add new listener
-    setTimeout(function(){
-      document.addEventListener('click', _onDocumentClick);
-    }, 0);
-  }
-
-  function _onDocumentClick(e){
-    var fieldIds = ['tt-field-where', 'tt-field-when', 'tt-field-players', 'tt-field-access'];
-    var clickedInside = false;
-
-    fieldIds.forEach(function(id){
-      var el = document.getElementById(id);
-      if(el && el.contains(e.target)){
-        clickedInside = true;
-      }
-    });
-
-    if(!clickedInside){
-      var hadOpen = _ui.showWhereDropdown || _ui.showWhenDropdown || _ui.showPlayersDropdown || _ui.showAccessDropdown;
-      _closeAllDropdowns();
-      if(hadOpen) render();
+    var html = '<div class="tt-card" data-tt-id="' + tt.id + '">';
+    
+    // L1: 主信息（时间 + 价格 + 可用性）
+    html += '<div class="tt-card-primary">';
+    html += '<div class="tt-card-time">' + tt.time + '</div>';
+    html += '<div class="tt-card-availability ' + availabilityClass + '">' + availabilityText + '</div>';
+    html += '<div class="tt-card-price">';
+    if(tt.priceNote) html += '<span class="tt-price-note">' + tt.priceNote + '</span>';
+    html += '<span class="tt-price-amount">¥' + tt.displayPrice + '</span>';
+    html += '</div>';
+    html += '</div>';
+    
+    // L2: 场地信息
+    html += '<div class="tt-card-course">';
+    html += '<div class="tt-course-name">' + tt.courseName + '</div>';
+    html += '<div class="tt-course-routing">' + tt.courseRouting + '</div>';
+    html += '</div>';
+    
+    // L3: 决策信息（Access + 预订方式 + 限制）
+    html += '<div class="tt-card-decision">';
+    html += '<span class="tt-access-badge ' + accessClass + '">' + tt.accessLabel + '</span>';
+    html += '<span class="tt-booking-method">' + tt.bookingLabel + '</span>';
+    if(tt.restrictions && tt.restrictions.length > 0){
+      html += '<span class="tt-restriction">' + tt.restrictions[0] + '</span>';
     }
+    html += '</div>';
+    
+    // L4: 辅助信息
+    if(tt.meta && tt.meta.length > 0){
+      html += '<div class="tt-card-meta">' + tt.meta.join(' · ') + '</div>';
+    }
+    
+    // L5: 动作按钮
+    html += '<div class="tt-card-actions">';
+    
+    // Book 按钮
+    var bookDisabled = isFull || tt.bookingMethod === 'display_only';
+    var bookClass = bookDisabled ? 'tt-btn-disabled' : 'tt-btn-primary';
+    var bookText = isFull ? T('full') : (tt.bookingMethod === 'phone' ? T('call') : T('book'));
+    html += '<button class="tt-btn ' + bookClass + '" data-action="book" data-tt-id="' + tt.id + '"' + (bookDisabled ? ' disabled' : '') + '>' + bookText + '</button>';
+    
+    // Start Round 按钮
+    var srDisabled = isFull;
+    var srClass = srDisabled ? 'tt-btn-disabled' : 'tt-btn-secondary';
+    html += '<button class="tt-btn ' + srClass + '" data-action="startRound" data-tt-id="' + tt.id + '"' + (srDisabled ? ' disabled' : '') + '>' + T('startRound') + '</button>';
+    
+    html += '</div>';
+    html += '</div>';
+    
+    return html;
   }
 
-  function formatDateLabel(date, type){
-    var today = new Date();
-    var tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    if(type === 'today' || isSameDate(date, today)){
-      return T('todayLabel', 'Today');
-    }
-    if(type === 'tomorrow' || isSameDate(date, tomorrow)){
-      return T('tomorrowLabel', 'Tomorrow');
+  // 事件绑定
+  function _wireEvents(){
+    // Intent Bar 字段点击
+    var fields = document.querySelectorAll('.tt-intent-field');
+    for(var i = 0; i < fields.length; i++){
+      fields[i].addEventListener('click', function(){
+        var field = this.dataset.field;
+        _ui.openField = _ui.openField === field ? null : field;
+        render();
+      });
     }
 
-    var dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Where 选项
+    var whereOptions = document.querySelectorAll('.tt-where-option');
+    for(var i = 0; i < whereOptions.length; i++){
+      whereOptions[i].addEventListener('click', function(){
+        _state.where = { type: this.dataset.type, id: this.dataset.id, name: this.dataset.name };
+        _ui.openField = null;
+        render();
+      });
+    }
 
-    return dayNames[date.getDay()] + ', ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+    // When 快捷选项
+    var whenPresets = document.querySelectorAll('.tt-when-preset');
+    for(var i = 0; i < whenPresets.length; i++){
+      whenPresets[i].addEventListener('click', function(){
+        var preset = this.dataset.preset;
+        var d = new Date();
+        if(preset === 'tomorrow') d.setDate(d.getDate() + 1);
+        if(preset === 'weekend'){
+          var daysUntilSat = 6 - d.getDay();
+          if(daysUntilSat < 0) daysUntilSat += 7;
+          d.setDate(d.getDate() + daysUntilSat);
+        }
+        _state.when = { preset: preset, date: _formatDate(d) };
+        _ui.openField = null;
+        render();
+      });
+    }
+
+    // When 日历选择
+    var calendarDays = document.querySelectorAll('.tt-calendar-day');
+    for(var i = 0; i < calendarDays.length; i++){
+      calendarDays[i].addEventListener('click', function(){
+        _state.when = { preset: null, date: this.dataset.date };
+        _ui.openField = null;
+        render();
+      });
+    }
+
+    // Players 选项
+    var playersOptions = document.querySelectorAll('.tt-players-option');
+    for(var i = 0; i < playersOptions.length; i++){
+      playersOptions[i].addEventListener('click', function(){
+        _state.players = parseInt(this.dataset.players);
+        _ui.openField = null;
+        render();
+      });
+    }
+
+    // Access 选项
+    var accessOptions = document.querySelectorAll('.tt-access-option');
+    for(var i = 0; i < accessOptions.length; i++){
+      accessOptions[i].addEventListener('click', function(){
+        _state.access = this.dataset.access;
+        _ui.openField = null;
+        render();
+      });
+    }
+
+    // Book 按钮
+    var bookBtns = document.querySelectorAll('[data-action="book"]');
+    for(var i = 0; i < bookBtns.length; i++){
+      bookBtns[i].addEventListener('click', function(){
+        var ttId = this.dataset.ttId;
+        var tt = _teeTimes.find(function(t){ return t.id === ttId; });
+        if(!tt) return;
+        
+        if(tt.bookingMethod === 'phone'){
+          alert(T('callToBook') + ': 400-XXX-XXXX');
+        } else if(tt.bookingMethod === 'external_link'){
+          alert(T('externalBooking'));
+        } else if(tt.bookingMethod === 'member_portal'){
+          if(typeof AuthState !== 'undefined' && !AuthState.isLoggedIn()){
+            alert(T('pleaseLoginToBook'));
+            Router.navigate('/login');
+            return;
+          }
+          alert(T('redirectToMemberPortal'));
+        }
+      });
+    }
+
+    // Start Round 按钮
+    var srBtns = document.querySelectorAll('[data-action="startRound"]');
+    for(var i = 0; i < srBtns.length; i++){
+      srBtns[i].addEventListener('click', function(){
+        var ttId = this.dataset.ttId;
+        var tt = _teeTimes.find(function(t){ return t.id === ttId; });
+        if(!tt) return;
+        
+        // 跳转到 New Round 页面，预填参数
+        var params = 'teetime=' + encodeURIComponent(ttId) + 
+                     '&course=' + encodeURIComponent(tt.courseId) +
+                     '&date=' + encodeURIComponent(tt.date) +
+                     '&time=' + encodeURIComponent(tt.time);
+        Router.navigate('/new-round?' + params);
+      });
+    }
   }
-
-  function isSameDate(d1, d2){
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
-  }
-
-  // ══════════════════════════════════════════
-  // INITIALIZATION
-  // ══════════════════════════════════════════
-
-  init();
 
   return {
-    render: render,
-    toggleWhere: toggleWhere,
-    selectWhere: selectWhere,
-    toggleWhen: toggleWhen,
-    selectWhenType: selectWhenType,
-    selectWhenDate: selectWhenDate,
-    togglePlayers: togglePlayers,
-    selectPlayers: selectPlayers,
-    toggleAccess: toggleAccess,
-    selectAccess: selectAccess,
-    search: search
+    render: render
   };
-
 })();
