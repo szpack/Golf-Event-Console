@@ -27,6 +27,7 @@ const RoundsPage = (function(){
   function render(){
     var el = document.getElementById('page-rounds-content');
     if(!el) return;
+    if(!Shell.requireAuth('page-rounds-content')) return;
 
     var active = _h().getActiveSummary();
     var stored = _h().getStoredRounds();

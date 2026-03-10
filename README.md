@@ -168,6 +168,43 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 ## Changelog
 
+### v21.3.0 — 2026-03-10
+- **登录/未登录双模式 UI**：根据用户登录状态展示不同界面
+- **Guest 首页**：未登录时显示产品介绍、三大功能卡片和登录/注册引导按钮
+- **已登录首页**：显示 "Welcome back, {displayName}" 欢迎横幅
+- **Sidebar 导航差异化**：未登录隐藏 Rounds/Courses/Players/Teams/Clubs/Overlay/Settings 等入口，仅显示 Home + 登录/注册
+- **功能访问守卫**：Rounds/Courses/New Round 页面未登录时渲染登录引导卡片，替代空白页面
+- **Sidebar 注册按钮**：未登录时底部新增醒目 "Create Account" 入口
+- 版本号标签统一更新至 v21.3.0
+
+### v21.2.1 — 2026-03-10
+- **省份+城市双筛选**：拆分为 Province 和 City 两个独立下拉，选择省份后城市列表自动联动（仅显示该省城市），切换省份时自动清空城市选择
+
+### v21.2.0 — 2026-03-10
+- **城市筛选**：新增 City 下拉筛选器，自动提取已有城市列表
+- **默认排序**：改为按更新时间降序（最近修改的球场排在前面）
+- **Updated 列**：新增更新日期列，支持排序
+- **每页条数选择**：支持 10 / 20 / 50 每页切换，默认 20
+- **状态圆点图标**：Status badge 前增加彩色圆点，视觉区分更直观
+- **统计栏优化**：筛选时显示 "匹配数 / 总数" 格式，右侧聚合页码选择器和归档入口
+
+### v21.1.0 — 2026-03-10
+- **Courses 页面优化**：精简表格列（Name/City/Holes/Layouts/Status/Actions）
+- 新增列排序（Name/City/Status 点击表头切换升降序）
+- 分页支持（每页 50 条，504 球场不再全量渲染）
+- 表头固定（sticky header），斑马纹行背景
+- 每行增加 Edit / Del 操作按钮（hover 显示），Delete 操作需确认
+- 搜索框支持 IME 中文输入，filter 切换时自动回到第一页
+- 表格外框圆角包裹，视觉层次更清晰
+
+### v21.0.0 — 2026-03-10
+- **用户系统 MVP**：新增云端账号体系，支持邮箱注册/登录，为未来微信/手机绑定预留架构
+- **后端**：Express + Prisma + PostgreSQL，users / auth_identities / players / sessions 四表
+- **API**：register / login / logout / refresh / me / players 8 个端点，JWT + refresh token
+- **前端**：apiClient（自动 token 刷新）+ authState（登录态管理）+ 登录注册页 + 个人资料页
+- **Sidebar**：新增账号入口，未登录显示 Sign In，已登录显示用户名
+- **游客模式保留**：未登录仍可正常使用所有本地功能
+
 ### v20.1.6 — 2026-03-09
 - **修复**：New Round 球场搜索支持中文/日文/韩文 IME 输入，组合期间不打断输入法
 

@@ -5,8 +5,12 @@
 
 const CoursesPage = (function(){
 
-  var _filter = { query:'', city:'', status:'', source:'' };
+  var _filter = { query:'', status:'', source:'', province:'', city:'' };
+  var _sort = { col:'updated', asc:false };
   var _drawerClubId = null;
+  var _composing = false;        // IME support
+  var _page = 0;                 // current page (0-based)
+  var _pageSize = 20;            // rows per page (user-selectable)
 
   // ══════════════════════════════════════════
   // RENDER — List Page
@@ -15,6 +19,7 @@ const CoursesPage = (function(){
   function render(){
     var el = document.getElementById('page-courses-content');
     if(!el) return;
+    if(!Shell.requireAuth('page-courses-content')) return;
 
     var html = '';
 
@@ -28,8 +33,24 @@ const CoursesPage = (function(){
     html += '</div>';
 
     // Search + Filters
+    var allClubs = ClubStore.listActive();
+    var provinces = _extractField(allClubs, 'province');
+    var cities = _extractCities(allClubs, _filter.province);
+
     html += '<div class="cs-filters">';
-    html += '<input type="text" class="cs-search" id="cs-search" placeholder="Search clubs..." value="' + _esc(_filter.query) + '" oninput="CoursesPage.onSearch(this.value)">';
+    html += '<input type="text" class="cs-search" id="cs-search" placeholder="Search clubs..." value="' + _esc(_filter.query) + '">';
+    html += '<select class="cs-select" id="cs-filter-province" onchange="CoursesPage.onFilterProvince(this.value)">';
+    html += '<option value="">All Provinces</option>';
+    for(var pi = 0; pi < provinces.length; pi++){
+      html += '<option value="' + _esc(provinces[pi]) + '"' + (_filter.province===provinces[pi]?' selected':'') + '>' + _esc(provinces[pi]) + '</option>';
+    }
+    html += '</select>';
+    html += '<select class="cs-select" id="cs-filter-city" onchange="CoursesPage.onFilterCity(this.value)">';
+    html += '<option value="">All Cities</option>';
+    for(var ci = 0; ci < cities.length; ci++){
+      html += '<option value="' + _esc(cities[ci]) + '"' + (_filter.city===cities[ci]?' selected':'') + '>' + _esc(cities[ci]) + '</option>';
+    }
+    html += '</select>';
     html += '<select class="cs-select" id="cs-filter-status" onchange="CoursesPage.onFilterStatus(this.value)">';
     html += '<option value="">All Status</option>';
     html += '<option value="operating"' + (_filter.status==='operating'?' selected':'') + '>Operating</option>';
@@ -43,75 +64,129 @@ const CoursesPage = (function(){
     html += '</select>';
     html += '</div>';
 
-    // Build city list from data
-    var allClubs = ClubStore.listActive();
-    var cities = _extractCities(allClubs);
-
-    // Filter
+    // Get filtered + sorted clubs
     var clubs = _applyFilters();
+    clubs = _applySort(clubs);
+    var totalCount = clubs.length;
+
+    // Pagination
+    var totalPages = Math.max(1, Math.ceil(totalCount / _pageSize));
+    if(_page >= totalPages) _page = totalPages - 1;
+    if(_page < 0) _page = 0;
+    var startIdx = _page * _pageSize;
+    var pageClubs = clubs.slice(startIdx, startIdx + _pageSize);
 
     // Stats bar
+    var totalAll = allClubs.length;
+    var hasFilter = _filter.query || _filter.status || _filter.source || _filter.province || _filter.city;
     html += '<div class="cs-stats">';
-    html += '<span class="cs-stats-count">' + clubs.length + ' club' + (clubs.length !== 1 ? 's' : '') + '</span>';
+    html += '<span class="cs-stats-count">';
+    if(hasFilter){
+      html += totalCount + ' / ' + totalAll + ' clubs';
+    } else {
+      html += totalCount + ' club' + (totalCount !== 1 ? 's' : '');
+    }
+    if(totalPages > 1) html += ' &middot; Page ' + (_page + 1) + '/' + totalPages;
+    html += '</span>';
+    html += '<span class="cs-stats-right">';
+    // Page size selector
+    html += '<select class="cs-select cs-pagesize-select" onchange="CoursesPage.setPageSize(+this.value)">';
+    var sizes = [10, 20, 50];
+    for(var si = 0; si < sizes.length; si++){
+      html += '<option value="' + sizes[si] + '"' + (_pageSize === sizes[si] ? ' selected' : '') + '>' + sizes[si] + ' / page</option>';
+    }
+    html += '</select>';
     var archived = ClubStore.listArchived();
     if(archived.length > 0){
       html += '<button class="cs-link-btn" onclick="CoursesPage.showArchived()">Archived (' + archived.length + ')</button>';
     }
+    html += '</span>';
     html += '</div>';
 
     // Table
-    if(clubs.length === 0){
+    if(totalCount === 0){
       html += '<div class="cs-empty">';
       html += '<div class="cs-empty-icon">&#127948;</div>';
-      html += '<div class="cs-empty-title">No clubs yet</div>';
-      html += '<div class="cs-empty-text">Add your first golf club to get started.</div>';
-      html += '<button class="cs-btn cs-btn-primary" onclick="CoursesPage.createNew()" style="margin-top:16px">+ New Club</button>';
+      html += '<div class="cs-empty-title">No clubs found</div>';
+      if(_filter.query || _filter.status || _filter.source || _filter.province || _filter.city){
+        html += '<div class="cs-empty-text">Try adjusting your filters.</div>';
+      } else {
+        html += '<div class="cs-empty-text">Add your first golf club to get started.</div>';
+        html += '<button class="cs-btn cs-btn-primary" onclick="CoursesPage.createNew()" style="margin-top:16px">+ New Club</button>';
+      }
       html += '</div>';
     } else {
       html += '<div class="cs-table-wrap">';
       html += '<table class="cs-table">';
       html += '<thead><tr>';
-      html += '<th class="cs-th-name">Name</th>';
-      html += '<th class="cs-th-city">City</th>';
+      html += _thSortable('name', 'Name', 'cs-th-name');
+      html += _thSortable('city', 'City', 'cs-th-city');
       html += '<th class="cs-th-holes">Holes</th>';
       html += '<th class="cs-th-layouts">Layouts</th>';
-      html += '<th class="cs-th-status">Status</th>';
-      html += '<th class="cs-th-source">Source</th>';
-      html += '<th class="cs-th-updated">Updated</th>';
+      html += _thSortable('status', 'Status', 'cs-th-status');
+      html += _thSortable('updated', 'Updated', 'cs-th-updated');
+      html += '<th class="cs-th-actions">Actions</th>';
       html += '</tr></thead>';
       html += '<tbody>';
-      for(var i = 0; i < clubs.length; i++){
-        html += _renderRow(clubs[i]);
+      for(var i = 0; i < pageClubs.length; i++){
+        html += _renderRow(pageClubs[i], startIdx + i);
       }
       html += '</tbody></table>';
       html += '</div>';
+
+      // Pagination controls
+      if(totalPages > 1){
+        html += '<div class="cs-pagination">';
+        html += '<button class="cs-page-btn" onclick="CoursesPage.goPage(0)"' + (_page === 0 ? ' disabled' : '') + '>&laquo;</button>';
+        html += '<button class="cs-page-btn" onclick="CoursesPage.goPage(' + (_page - 1) + ')"' + (_page === 0 ? ' disabled' : '') + '>&lsaquo;</button>';
+
+        // Show page numbers around current
+        var pStart = Math.max(0, _page - 2);
+        var pEnd = Math.min(totalPages - 1, _page + 2);
+        for(var p = pStart; p <= pEnd; p++){
+          html += '<button class="cs-page-btn' + (p === _page ? ' cs-page-active' : '') + '" onclick="CoursesPage.goPage(' + p + ')">' + (p + 1) + '</button>';
+        }
+
+        html += '<button class="cs-page-btn" onclick="CoursesPage.goPage(' + (_page + 1) + ')"' + (_page >= totalPages - 1 ? ' disabled' : '') + '>&rsaquo;</button>';
+        html += '<button class="cs-page-btn" onclick="CoursesPage.goPage(' + (totalPages - 1) + ')"' + (_page >= totalPages - 1 ? ' disabled' : '') + '>&raquo;</button>';
+        html += '</div>';
+      }
     }
 
     el.innerHTML = html;
+    _wireSearch();
   }
 
-  function _renderRow(club){
-    var pct = ClubStore.completeness(club);
-    var pctColor = ClubStore.completenessColor(pct);
+  function _thSortable(col, label, cls){
+    var arrow = '';
+    if(_sort.col === col){
+      arrow = _sort.asc ? ' &#9650;' : ' &#9660;';
+    }
+    return '<th class="' + cls + ' cs-th-sortable" onclick="CoursesPage.toggleSort(\'' + col + '\')">' + label + arrow + '</th>';
+  }
+
+  function _renderRow(club, index){
     var holes = ClubStore.totalHoles(club);
     var layouts = (club.layouts || []).length;
     var statusCls = 'cs-status-' + (club.status || 'unknown');
     var statusLabel = _statusLabel(club.status);
-    var sourceLabel = club.source || '—';
-    var updated = _fmtDate(club.updatedAt);
     var name = _esc(club.name || club.name_en || 'Untitled');
+    var zebraClass = index % 2 === 1 ? ' cs-row-alt' : '';
 
-    var html = '<tr class="cs-row" onclick="CoursesPage.openDrawer(\'' + club.id + '\')">';
-    html += '<td class="cs-td-name">';
+    var html = '<tr class="cs-row' + zebraClass + '">';
+    html += '<td class="cs-td-name" onclick="CoursesPage.openDrawer(\'' + club.id + '\')">';
     html += '<div class="cs-club-name">' + name + '</div>';
-    html += '<div class="cs-completeness-bar"><div class="cs-completeness-fill" style="width:' + pct + '%;background:' + pctColor + '"></div></div>';
+    if(club.name_en && club.name) html += '<div class="cs-club-name-en">' + _esc(club.name_en) + '</div>';
     html += '</td>';
     html += '<td class="cs-td-city">' + _esc(club.city || '—') + '</td>';
     html += '<td class="cs-td-holes">' + (holes || '—') + '</td>';
     html += '<td class="cs-td-layouts">' + (layouts || '—') + '</td>';
-    html += '<td class="cs-td-status"><span class="cs-status ' + statusCls + '">' + statusLabel + '</span></td>';
-    html += '<td class="cs-td-source">' + _esc(sourceLabel) + '</td>';
-    html += '<td class="cs-td-updated">' + updated + '</td>';
+    html += '<td class="cs-td-status"><span class="cs-status ' + statusCls + '"><span class="cs-status-dot"></span>' + statusLabel + '</span></td>';
+    html += '<td class="cs-td-updated">' + _fmtDate(club.updatedAt || club.createdAt) + '</td>';
+    html += '<td class="cs-td-actions">';
+    html += '<button class="cs-row-btn cs-row-btn-edit" onclick="event.stopPropagation();CoursesPage.editClub(\'' + club.id + '\')" title="Edit">Edit</button>';
+    html += '<button class="cs-row-btn cs-row-btn-del" onclick="event.stopPropagation();CoursesPage.deleteClub(\'' + club.id + '\')" title="Delete">Del</button>';
+    html += '</td>';
     html += '</tr>';
     return html;
   }
@@ -225,7 +300,7 @@ const CoursesPage = (function(){
     // Actions
     html += '<div class="cs-drawer-actions">';
     html += '<button class="cs-btn cs-btn-default" onclick="CoursesPage.editClub(\'' + club.id + '\')">Edit Details</button>';
-    html += '<button class="cs-btn cs-btn-danger" onclick="CoursesPage.archiveClub(\'' + club.id + '\')">Archive</button>';
+    html += '<button class="cs-btn cs-btn-danger" onclick="CoursesPage.deleteClub(\'' + club.id + '\')">Delete</button>';
     html += '</div>';
 
     el.innerHTML = html;
@@ -264,26 +339,87 @@ const CoursesPage = (function(){
   }
 
   // ══════════════════════════════════════════
-  // FILTERS
+  // SEARCH — with IME + focus restore
   // ══════════════════════════════════════════
 
-  function onSearch(val){
-    _filter.query = val;
+  function _wireSearch(){
+    var searchInput = document.getElementById('cs-search');
+    if(!searchInput) return;
+
+    searchInput.addEventListener('compositionstart', function(){ _composing = true; });
+    searchInput.addEventListener('compositionend', function(){
+      _composing = false;
+      _filter.query = this.value;
+      _page = 0;
+      var pos = this.selectionStart;
+      render();
+      var restored = document.getElementById('cs-search');
+      if(restored){ restored.focus(); restored.setSelectionRange(pos, pos); }
+    });
+    searchInput.addEventListener('input', function(){
+      if(_composing) return;
+      _filter.query = this.value;
+      _page = 0;
+      var pos = this.selectionStart;
+      render();
+      var restored = document.getElementById('cs-search');
+      if(restored){ restored.focus(); restored.setSelectionRange(pos, pos); }
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // FILTERS & SORT
+  // ══════════════════════════════════════════
+
+  function onFilterProvince(val){
+    _filter.province = val;
+    _filter.city = '';   // reset city when province changes
+    _page = 0;
+    render();
+  }
+
+  function onFilterCity(val){
+    _filter.city = val;
+    _page = 0;
     render();
   }
 
   function onFilterStatus(val){
     _filter.status = val;
+    _page = 0;
     render();
   }
 
   function onFilterSource(val){
     _filter.source = val;
+    _page = 0;
+    render();
+  }
+
+  function setPageSize(n){
+    _pageSize = n;
+    _page = 0;
+    render();
+  }
+
+  function toggleSort(col){
+    if(_sort.col === col){
+      _sort.asc = !_sort.asc;
+    } else {
+      _sort.col = col;
+      _sort.asc = true;
+    }
     render();
   }
 
   function _applyFilters(){
     var clubs = _filter.query ? ClubStore.search(_filter.query) : ClubStore.listActive();
+    if(_filter.province){
+      clubs = clubs.filter(function(c){ return (c.province || '') === _filter.province; });
+    }
+    if(_filter.city){
+      clubs = clubs.filter(function(c){ return (c.city || '') === _filter.city; });
+    }
     if(_filter.status){
       clubs = clubs.filter(function(c){ return c.status === _filter.status; });
     }
@@ -293,12 +429,47 @@ const CoursesPage = (function(){
     return clubs;
   }
 
-  function _extractCities(clubs){
-    var map = {};
-    for(var i = 0; i < clubs.length; i++){
-      if(clubs[i].city) map[clubs[i].city] = true;
-    }
-    return Object.keys(map).sort();
+  function _applySort(clubs){
+    var col = _sort.col;
+    var dir = _sort.asc ? 1 : -1;
+    return clubs.slice().sort(function(a, b){
+      var va, vb;
+      switch(col){
+        case 'name':
+          va = (a.name || a.name_en || '').toLowerCase();
+          vb = (b.name || b.name_en || '').toLowerCase();
+          break;
+        case 'city':
+          va = (a.city || '').toLowerCase();
+          vb = (b.city || '').toLowerCase();
+          break;
+        case 'status':
+          va = a.status || '';
+          vb = b.status || '';
+          break;
+        case 'updated':
+          va = a.updatedAt || a.createdAt || '';
+          vb = b.updatedAt || b.createdAt || '';
+          break;
+        default:
+          va = ''; vb = '';
+      }
+      if(va < vb) return -1 * dir;
+      if(va > vb) return 1 * dir;
+      return 0;
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // PAGINATION
+  // ══════════════════════════════════════════
+
+  function goPage(p){
+    _page = p;
+    render();
+    // Scroll to top of table
+    var el = document.getElementById('page-courses-content');
+    if(el) el.scrollTop = 0;
   }
 
   // ══════════════════════════════════════════
@@ -314,26 +485,26 @@ const CoursesPage = (function(){
   }
 
   function editClub(id){
-    // Navigate to full detail page (P1)
     closeDrawer();
     Router.navigate('/courses/' + id);
   }
 
-  function archiveClub(id){
+  function deleteClub(id){
     var club = ClubStore.get(id);
     if(!club) return;
+    var label = club.name || club.name_en || 'Untitled';
     var refs = ClubStore.getRefCount(id);
+    var msg = 'Are you sure you want to delete "' + label + '"?';
     if(refs > 0){
-      alert('This club is referenced by ' + refs + ' round(s). It will be archived (not deleted).');
+      msg = '"' + label + '" is referenced by ' + refs + ' round(s). It will be archived instead of permanently deleted.\n\nContinue?';
     }
-    if(!confirm('Archive "' + (club.name || 'Untitled') + '"?')) return;
+    if(!confirm(msg)) return;
     ClubStore.archive(id, 'archived');
     closeDrawer();
     render();
   }
 
   function showArchived(){
-    // Simple alert for now — P2 will add full archived page
     var archived = ClubStore.listArchived();
     if(archived.length === 0){ alert('No archived clubs.'); return; }
     var msg = 'Archived Clubs:\n\n';
@@ -349,7 +520,7 @@ const CoursesPage = (function(){
   // ══════════════════════════════════════════
 
   function _esc(s){
-    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
   function _fmtDate(iso){
@@ -362,16 +533,41 @@ const CoursesPage = (function(){
     return map[s] || s || '—';
   }
 
+  function _extractField(clubs, field){
+    var seen = {};
+    var list = [];
+    for(var i = 0; i < clubs.length; i++){
+      var v = clubs[i][field];
+      if(v && !seen[v]){
+        seen[v] = true;
+        list.push(v);
+      }
+    }
+    list.sort(function(a, b){ return a.localeCompare(b); });
+    return list;
+  }
+
+  function _extractCities(clubs, province){
+    var filtered = province
+      ? clubs.filter(function(c){ return c.province === province; })
+      : clubs;
+    return _extractField(filtered, 'city');
+  }
+
   return {
     render: render,
     openDrawer: openDrawer,
     closeDrawer: closeDrawer,
-    onSearch: onSearch,
+    onFilterProvince: onFilterProvince,
+    onFilterCity: onFilterCity,
     onFilterStatus: onFilterStatus,
     onFilterSource: onFilterSource,
+    toggleSort: toggleSort,
+    goPage: goPage,
+    setPageSize: setPageSize,
     createNew: createNew,
     editClub: editClub,
-    archiveClub: archiveClub,
+    deleteClub: deleteClub,
     showArchived: showArchived
   };
 

@@ -14,10 +14,25 @@ const HomePage = (function(){
     if(!el){ console.error('[HomePage] #page-home-content not found'); return; }
 
     try {
+    var loggedIn = typeof AuthState !== 'undefined' && AuthState.isLoggedIn();
+
+    if(!loggedIn){
+      el.innerHTML = _renderGuestHome();
+      return;
+    }
+
+    // ── Logged-in home ──
+    var user = AuthState.getUser();
     var active = _h().getActiveSummary();
     var recent = _h().getStoredRounds(5);
 
     var html = '';
+
+    // Welcome
+    var displayName = (user && user.displayName) ? user.displayName : 'Golfer';
+    html += '<div class="sh-welcome">';
+    html += '<span class="sh-welcome-text">Welcome back, <strong>' + _h().esc(displayName) + '</strong></span>';
+    html += '</div>';
 
     // ── 1. Current Round ──
     html += '<div class="sh-section">';
@@ -67,6 +82,35 @@ const HomePage = (function(){
 
     el.innerHTML = html;
     } catch(e){ console.error('[HomePage] render error:', e); el.innerHTML = '<div style="padding:24px;color:red">Render error: ' + e.message + '</div>'; }
+  }
+
+  // ── Guest (not logged in) home ──
+  function _renderGuestHome(){
+    var html = '<div class="guest-home">';
+    html += '<div class="guest-hero">';
+    html += '<div class="guest-hero-icon">&#9971;</div>';
+    html += '<h1 class="guest-hero-title">Golf Event Console</h1>';
+    html += '<p class="guest-hero-subtitle">Professional golf event management and live overlay system.</p>';
+    html += '</div>';
+    html += '<div class="guest-cta">';
+    html += '<button class="sh-btn-primary sh-btn-lg" onclick="Router.navigate(\'/login\')">Sign In</button>';
+    html += '<button class="sh-btn-outline sh-btn-lg" onclick="Router.navigate(\'/register\')">Create Account</button>';
+    html += '</div>';
+    html += '<div class="guest-features">';
+    html += _featureCard('&#127963;', 'Course Management', 'Manage golf clubs with full course structure, tees, and layouts.');
+    html += _featureCard('&#9971;', 'Round Tracking', 'Score tracking with real-time leaderboard and player statistics.');
+    html += _featureCard('&#127909;', 'Live Overlay', 'Broadcast-quality overlays for streaming and content creation.');
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function _featureCard(icon, title, desc){
+    return '<div class="guest-feature">'
+      + '<div class="guest-feature-icon">' + icon + '</div>'
+      + '<div class="guest-feature-title">' + title + '</div>'
+      + '<div class="guest-feature-desc">' + desc + '</div>'
+      + '</div>';
   }
 
   // ── Hero card (current round) ──

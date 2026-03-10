@@ -27,6 +27,16 @@ const AuthState = (function(){
 
   // ── Init: check existing token on startup ──
   async function init(){
+    // Auto-detect API base URL: same host, port 3001 for dev; or /api for production proxy
+    if(!ApiClient.getBaseUrl()){
+      var loc = window.location;
+      if(loc.port && loc.port !== '80' && loc.port !== '443'){
+        // Dev mode: static files on e.g. 5173, API on 3001
+        ApiClient.setBaseUrl(loc.protocol + '//' + loc.hostname + ':3001');
+      }
+      // Otherwise empty = same origin (production with reverse proxy)
+    }
+
     if(!ApiClient.hasTokens()){
       _ready = true;
       _notify();

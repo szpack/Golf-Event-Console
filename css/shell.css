@@ -1433,6 +1433,18 @@ html.light #sb-backdrop { background: rgba(0,0,0,.3); }
   color: var(--text-section);
 }
 
+.cs-stats-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cs-pagesize-select {
+  font-size: 12px;
+  padding: 3px 8px;
+  min-width: auto;
+}
+
 .cs-link-btn {
   background: none;
   border: none;
@@ -1453,6 +1465,8 @@ html.light #sb-backdrop { background: rgba(0,0,0,.3); }
 /* Table */
 .cs-table-wrap {
   overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
 }
 
 .cs-table {
@@ -1468,9 +1482,23 @@ html.light #sb-backdrop { background: rgba(0,0,0,.3); }
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-section);
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--bg-sidebar, #1a1a1a);
+  z-index: 2;
+}
+
+.cs-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.cs-th-sortable:hover {
+  color: var(--text-primary);
 }
 
 .cs-table tbody tr {
@@ -1482,8 +1510,17 @@ html.light #sb-backdrop { background: rgba(0,0,0,.3); }
   background: var(--bg-hover);
 }
 
+/* Zebra striping */
+.cs-row-alt {
+  background: rgba(255,255,255,0.015);
+}
+
+.cs-row-alt:hover {
+  background: var(--bg-hover) !important;
+}
+
 .cs-table tbody td {
-  padding: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
   vertical-align: middle;
@@ -1493,10 +1530,104 @@ html.light #sb-backdrop { background: rgba(0,0,0,.3); }
 .cs-th-city { min-width: 80px; }
 .cs-th-holes, .cs-th-layouts { min-width: 60px; text-align: center; }
 .cs-th-status { min-width: 80px; }
-.cs-th-source { min-width: 60px; }
 .cs-th-updated { min-width: 90px; }
+.cs-th-actions { min-width: 100px; text-align: right; }
 
 .cs-td-holes, .cs-td-layouts { text-align: center; }
+.cs-td-updated { font-size: 12px; color: var(--text-section); }
+
+/* Row action buttons */
+.cs-td-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cs-row-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  opacity: 0;
+}
+
+.cs-row:hover .cs-row-btn {
+  opacity: 1;
+}
+
+.cs-row-btn-edit {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  margin-right: 4px;
+}
+
+.cs-row-btn-edit:hover {
+  background: var(--bg-active);
+}
+
+.cs-row-btn-del {
+  background: none;
+  color: #f87171;
+}
+
+.cs-row-btn-del:hover {
+  background: rgba(248,113,113,0.1);
+}
+
+/* Pagination */
+.cs-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 16px;
+  padding-bottom: 8px;
+}
+
+.cs-page-btn {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 34px;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cs-page-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cs-page-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cs-page-active {
+  background: var(--accent-green);
+  color: #000;
+  border-color: var(--accent-green);
+  font-weight: 600;
+}
+
+.cs-page-active:hover {
+  background: var(--accent-green) !important;
+  color: #000 !important;
+}
+
+/* Club name secondary line */
+.cs-club-name-en {
+  font-size: 11px;
+  color: var(--text-section);
+  margin-top: 2px;
+}
 
 .cs-club-name {
   font-weight: 500;
@@ -1527,12 +1658,22 @@ html.light #sb-backdrop { background: rgba(0,0,0,.3); }
 
 /* Status badge */
 .cs-status {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 10px;
   letter-spacing: 0.02em;
+}
+
+.cs-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .cs-status-operating { background: rgba(74,222,128,0.15); color: #4ade80; }
@@ -1785,9 +1926,16 @@ html.light .cs-search { background: #fff; border-color: rgba(0,0,0,0.08); color:
 html.light .cs-search::placeholder { color: #9ca3af; }
 html.light .cs-search:focus { border-color: var(--accent-green); }
 html.light .cs-select { background: #fff; border-color: rgba(0,0,0,0.08); color: #1a1a1a; }
-html.light .cs-table thead th { color: #9ca3af; border-color: rgba(0,0,0,0.06); }
+html.light .cs-table-wrap { border-color: rgba(0,0,0,0.08); }
+html.light .cs-table thead th { color: #9ca3af; border-color: rgba(0,0,0,0.06); background: #f9fafb; }
 html.light .cs-table tbody tr:hover { background: rgba(0,0,0,0.02); }
+html.light .cs-row-alt { background: rgba(0,0,0,0.015); }
 html.light .cs-table tbody td { border-color: rgba(0,0,0,0.04); color: #374151; }
+html.light .cs-row-btn-edit { background: rgba(0,0,0,0.04); color: #374151; }
+html.light .cs-row-btn-edit:hover { background: rgba(0,0,0,0.08); }
+html.light .cs-page-btn { border-color: rgba(0,0,0,0.08); color: #6b7280; }
+html.light .cs-page-btn:hover:not(:disabled) { background: rgba(0,0,0,0.04); color: #374151; }
+html.light .cs-club-name-en { color: #9ca3af; }
 html.light .cs-club-name { color: #1a1a1a; }
 html.light .cs-completeness-bar { background: rgba(0,0,0,0.04); }
 html.light .cs-status-operating { background: rgba(22,163,106,0.08); color: #16a34a; }
@@ -3706,8 +3854,190 @@ html.light .ci-row-skip { opacity: 0.4; }
   font-size: 16px;
 }
 
+/* ══════════════════════════════════════════
+   GUEST HOME PAGE
+   ══════════════════════════════════════════ */
+
+.guest-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px 40px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.guest-hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.guest-hero-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+.guest-hero-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+
+.guest-hero-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.guest-cta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+.guest-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.guest-feature {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.guest-feature:hover {
+  border-color: var(--accent-green);
+}
+
+.guest-feature-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+
+.guest-feature-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.guest-feature-desc {
+  font-size: 12px;
+  color: var(--text-section);
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .guest-features { grid-template-columns: 1fr; }
+  .guest-hero-title { font-size: 22px; }
+  .guest-home { padding: 32px 16px; }
+}
+
+/* ══════════════════════════════════════════
+   AUTH GUARD (login-required prompt)
+   ══════════════════════════════════════════ */
+
+.auth-guard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.auth-guard-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.auth-guard-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.auth-guard-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.auth-guard-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Outline button variant */
+.sh-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sh-btn-outline:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-section);
+}
+
+/* Large button size */
+.sh-btn-lg {
+  padding: 12px 32px;
+  font-size: 15px;
+}
+
+/* Welcome banner */
+.sh-welcome {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.sh-welcome strong {
+  color: var(--text-primary);
+}
+
+/* Sidebar register button (guest only) */
+.sb-register-btn {
+  color: var(--accent-green) !important;
+}
+
 /* ── Light theme overrides ── */
 html.light .auth-card { background: #fff; }
 html.light .auth-field input { background: #f9fafb; color: #1a1a1a; }
 html.light .profile-card { background: #fff; }
 html.light .profile-input { background: #f9fafb; color: #1a1a1a; }
+html.light .guest-feature { background: #f9fafb; border-color: rgba(0,0,0,0.06); }
+html.light .guest-hero-title { color: #1a1a1a; }
+html.light .auth-guard-title { color: #1a1a1a; }
+html.light .sh-btn-outline { color: #374151; border-color: rgba(0,0,0,0.12); }
+html.light .sh-btn-outline:hover { background: rgba(0,0,0,0.03); }
+html.light .sh-welcome { background: #f9fafb; border-color: rgba(0,0,0,0.06); }
+html.light .sh-welcome strong { color: #1a1a1a; }

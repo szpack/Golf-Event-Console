@@ -559,18 +559,61 @@ const Shell = (function(){
   }
 
   function _updateAuthUI(){
+    var loggedIn = typeof AuthState !== 'undefined' && AuthState.isLoggedIn();
+    var user = loggedIn ? AuthState.getUser() : null;
+
+    // ── Sidebar auth button ──
     var iconEl = document.getElementById('sidebar-auth-icon');
     var labelEl = document.getElementById('sidebar-auth-label');
-    if(!iconEl || !labelEl) return;
+    if(iconEl && labelEl){
+      if(loggedIn){
+        var initial = (user && user.displayName) ? user.displayName.charAt(0).toUpperCase() : '?';
+        iconEl.textContent = initial;
+        labelEl.textContent = user.displayName || 'Profile';
+      } else {
+        iconEl.innerHTML = '&#128100;';
+        labelEl.textContent = 'Sign In';
+      }
+    }
 
-    if(typeof AuthState !== 'undefined' && AuthState.isLoggedIn()){
-      var user = AuthState.getUser();
-      var initial = (user && user.displayName) ? user.displayName.charAt(0).toUpperCase() : '?';
-      iconEl.textContent = initial;
-      labelEl.textContent = user.displayName || 'Profile';
-    } else {
-      iconEl.innerHTML = '&#128100;';
-      labelEl.textContent = 'Sign In';
+    // ── Sidebar nav visibility ──
+    // Protected nav items: hide when not logged in
+    var protectedRoutes = ['rounds', 'courses', 'players', 'teams', 'clubs'];
+    var navItems = document.querySelectorAll('.sb-item[data-route]');
+    for(var i = 0; i < navItems.length; i++){
+      var route = navItems[i].getAttribute('data-route');
+      if(protectedRoutes.indexOf(route) !== -1){
+        navItems[i].style.display = loggedIn ? '' : 'none';
+      }
+    }
+    // New Round button (no data-route, has class sb-new-round)
+    var newRoundBtn = document.querySelector('.sb-new-round');
+    if(newRoundBtn) newRoundBtn.style.display = loggedIn ? '' : 'none';
+    // Overlay Center action
+    var overlayAction = document.querySelector('.sb-action[data-route="round"]');
+    if(overlayAction) overlayAction.style.display = loggedIn ? '' : 'none';
+    // Section labels: Management / Workspace / Recent
+    var sectionLabels = document.querySelectorAll('.sb-section-label');
+    for(var i = 0; i < sectionLabels.length; i++){
+      var labelText = sectionLabels[i].textContent.trim();
+      if(labelText === 'Management' || labelText === 'Workspace' || labelText === 'Recent'){
+        sectionLabels[i].style.display = loggedIn ? '' : 'none';
+      }
+    }
+    // Live/Recent section
+    var liveRecent = document.getElementById('sb-live-recent');
+    if(liveRecent) liveRecent.style.display = loggedIn ? '' : 'none';
+    // Settings
+    var settingsBtn = document.querySelector('.sb-item[data-route="settings"]');
+    if(settingsBtn) settingsBtn.style.display = loggedIn ? '' : 'none';
+
+    // ── Sidebar register button (guest only) ──
+    var regEntry = document.getElementById('sidebar-register-entry');
+    if(regEntry) regEntry.style.display = loggedIn ? 'none' : '';
+
+    // ── Re-render current page if it's home (to switch between guest/loggedIn view) ──
+    if(_currentPage === 'home'){
+      HomePage.render();
     }
   }
 
@@ -580,6 +623,27 @@ const Shell = (function(){
     } else {
       Router.navigate('/login');
     }
+  }
+
+  /**
+   * Check if the current user can access a protected page.
+   * Returns true if logged in, false otherwise.
+   * When false, renders a login prompt card into the given container.
+   */
+  function requireAuth(containerId){
+    if(typeof AuthState !== 'undefined' && AuthState.isLoggedIn()) return true;
+    var el = document.getElementById(containerId);
+    if(!el) return false;
+    el.innerHTML = '<div class="auth-guard">'
+      + '<div class="auth-guard-icon">&#128274;</div>'
+      + '<div class="auth-guard-title">Sign in to continue</div>'
+      + '<div class="auth-guard-text">This feature requires a logged-in account.</div>'
+      + '<div class="auth-guard-actions">'
+      + '<button class="sh-btn-primary" onclick="Router.navigate(\'/login\')">Sign In</button>'
+      + '<button class="sh-btn-outline" onclick="Router.navigate(\'/register\')">Create Account</button>'
+      + '</div>'
+      + '</div>';
+    return false;
   }
 
   // ══════════════════════════════════════════
@@ -610,7 +674,8 @@ const Shell = (function(){
     settingsToggle: settingsToggle,
     settingsSlider: settingsSlider,
     settingsSelect: settingsSelect,
-    goAuth: goAuth
+    goAuth: goAuth,
+    requireAuth: requireAuth
   };
 
 })();

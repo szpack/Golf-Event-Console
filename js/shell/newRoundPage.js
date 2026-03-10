@@ -23,6 +23,7 @@ const NewRoundPage = (function(){
   function render(){
     var el = document.getElementById('page-new-round-content');
     if(!el){ console.error('[NewRoundPage] #page-new-round-content not found'); return; }
+    if(!Shell.requireAuth('page-new-round-content')) return;
     try {
 
     var html = '';
