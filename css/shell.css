@@ -407,16 +407,14 @@ body {
 
 #sidebar-lang-menu {
   display: none;
-  position: absolute;
-  left: 100%;
-  bottom: 0;
-  margin-left: 4px;
+  position: fixed;
   background: #262626;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 4px 0;
-  z-index: 700;
+  z-index: 9000;
   min-width: 100px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
 }
 
 #sidebar-lang-menu.show {
@@ -3408,3 +3406,308 @@ html.light .ci-match-none { color: #9ca3af; background: rgba(0,0,0,0.03); }
 html.light .ci-match-target { color: #9ca3af; }
 html.light .ci-td-nines { color: #6b7280; }
 html.light .ci-row-skip { opacity: 0.4; }
+
+/* ══════════════════════════════════════════
+   AUTH PAGE (Login / Register)
+   ══════════════════════════════════════════ */
+
+.auth-card {
+  max-width: 400px;
+  margin: 40px auto;
+  padding: 32px 24px;
+  background: var(--bg-card, #1e1e1e);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.auth-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+  text-align: center;
+}
+
+.auth-error {
+  background: rgba(220,38,38,0.12);
+  color: #ef4444;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.auth-field input {
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-input, #2a2a2a);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.auth-field input:focus {
+  border-color: var(--accent-green, #22c55e);
+}
+
+.auth-submit {
+  padding: 12px 20px;
+  background: var(--accent-green, #22c55e);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 4px;
+}
+
+.auth-submit:hover { opacity: 0.9; }
+.auth-submit:disabled { opacity: 0.5; cursor: default; }
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.auth-toggle a {
+  color: var(--accent-green, #22c55e);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-future {
+  margin-top: 24px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.auth-divider span {
+  font-size: 12px;
+  color: var(--text-section);
+  text-transform: uppercase;
+}
+
+.auth-coming-soon {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-section);
+}
+
+/* ══════════════════════════════════════════
+   PROFILE PAGE
+   ══════════════════════════════════════════ */
+
+.profile-card {
+  max-width: 480px;
+  margin: 40px auto;
+  padding: 32px 24px;
+  background: var(--bg-card, #1e1e1e);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-green, #22c55e);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  min-width: 0;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profile-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.profile-guest {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.profile-success {
+  background: rgba(34,197,94,0.12);
+  color: #22c55e;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.profile-section {
+  margin-bottom: 20px;
+}
+
+.profile-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-section);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.profile-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.profile-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.profile-input {
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-input, #2a2a2a);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  text-align: right;
+  width: 180px;
+  outline: none;
+}
+
+.profile-input:focus {
+  border-color: var(--accent-green, #22c55e);
+}
+
+.profile-input-sm {
+  width: 80px;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.profile-btn-edit,
+.profile-btn-cancel {
+  padding: 10px 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.profile-btn-edit:hover,
+.profile-btn-cancel:hover {
+  background: var(--bg-hover);
+}
+
+.profile-logout {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.profile-btn-logout {
+  padding: 10px 20px;
+  border: 1px solid rgba(220,38,38,0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.profile-btn-logout:hover {
+  background: rgba(220,38,38,0.08);
+}
+
+/* Sidebar auth entry */
+#sidebar-auth-entry {
+  margin-top: 2px;
+}
+
+#sidebar-btn-auth .sb-icon {
+  font-size: 16px;
+}
+
+/* ── Light theme overrides ── */
+html.light .auth-card { background: #fff; }
+html.light .auth-field input { background: #f9fafb; color: #1a1a1a; }
+html.light .profile-card { background: #fff; }
+html.light .profile-input { background: #f9fafb; color: #1a1a1a; }

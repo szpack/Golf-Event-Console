@@ -14,6 +14,7 @@ const NewRoundPage = (function(){
   var _teeTime = '';            // datetime-local value
   var _searchQuery = '';
   var _showAllClubs = false;    // whether to show full club list vs recent only
+  var _composing = false;       // IME composition in progress
 
   // ══════════════════════════════════════════
   // RENDER
@@ -69,8 +70,9 @@ const NewRoundPage = (function(){
     } else if(_showAllClubs){
       clubs = ClubStore.listActive();
     } else {
-      // Show recent first, then offer "show all"
+      // Show recent first; fall back to all if no recent
       clubs = NewRoundService.getRecentClubs(5);
+      if(clubs.length === 0) clubs = ClubStore.listActive();
     }
 
     html += '<div class="nr-club-list">';
@@ -92,10 +94,10 @@ const NewRoundPage = (function(){
     }
     html += '</div>';
 
-    // Show all button
+    // Show all button — when showing a subset (recent), offer to expand
     if(!_searchQuery && !_showAllClubs){
       var totalCount = ClubStore.listActive().length;
-      if(totalCount > 5){
+      if(totalCount > clubs.length){
         html += '<button class="nr-show-all-btn" onclick="NewRoundPage.showAllClubs()">Show all ' + totalCount + ' clubs</button>';
       }
     }
@@ -398,13 +400,27 @@ const NewRoundPage = (function(){
   }
 
   function _wireEvents(){
-    // Club search
+    // Club search — supports IME (Chinese/Japanese/Korean) input
     var searchInput = document.getElementById('nr-club-search');
     if(searchInput){
-      searchInput.addEventListener('input', function(){
+      searchInput.addEventListener('compositionstart', function(){ _composing = true; });
+      searchInput.addEventListener('compositionend', function(){
+        _composing = false;
         _searchQuery = this.value;
         _showAllClubs = false;
+        var pos = this.selectionStart;
         render();
+        var restored = document.getElementById('nr-club-search');
+        if(restored){ restored.focus(); restored.setSelectionRange(pos, pos); }
+      });
+      searchInput.addEventListener('input', function(){
+        if(_composing) return;  // skip during IME composition
+        _searchQuery = this.value;
+        _showAllClubs = false;
+        var pos = this.selectionStart;
+        render();
+        var restored = document.getElementById('nr-club-search');
+        if(restored){ restored.focus(); restored.setSelectionRange(pos, pos); }
       });
     }
 

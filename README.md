@@ -168,6 +168,18 @@ No build step · No external dependencies · Vanilla JS + Canvas
 
 ## Changelog
 
+### v20.1.6 — 2026-03-09
+- **修复**：New Round 球场搜索支持中文/日文/韩文 IME 输入，组合期间不打断输入法
+
+### v20.1.5 — 2026-03-09
+- **修复**：New Round 球场搜索框输入一个字符后失去焦点，无法连续输入关键字
+
+### v20.1.4 — 2026-03-09
+- **修复**：New Round 页面无球场可选 — 无历史球局时 fallback 显示全部球场
+
+### v20.1.3 — 2026-03-09
+- **修复**：侧边栏语言切换菜单被遮挡，改用 fixed 定位脱离 overflow 裁剪
+
 ### v20.1.2 — 2026-03-09
 - **New Round 入口重构**：左侧导航栏新增 ➕ New Round 按钮（绿色醒目），绕过 Router 直接切页面
 - 所有 New Round 入口（Sidebar / Home / Rounds 页）统一走 `Shell.showNewRound()` 直接切换

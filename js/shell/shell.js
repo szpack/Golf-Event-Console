@@ -25,6 +25,9 @@ const Shell = (function(){
     courseImport: { elementId:'page-course-import', render: function(){ CourseImportPage.render(); }, title:'Import Courses' },
     newRound: { elementId:'page-new-round', render: function(){ NewRoundPage.render(); }, title:'New Round' },
     clubs:    { elementId:'page-clubs',    title:'Clubs' },
+    login:    { elementId:'page-auth', render: function(route){ AuthPage.render(route); }, title:'Sign In' },
+    register: { elementId:'page-auth', render: function(route){ AuthPage.render(route); }, title:'Create Account' },
+    profile:  { elementId:'page-profile', render: function(){ ProfilePage.render(); }, title:'Profile' },
     settings: { elementId:'page-settings', render: function(){ _renderSettingsPage(); }, title:'Settings' }
   };
 
@@ -44,6 +47,9 @@ const Shell = (function(){
     Router.add('/courses/:id/structure', 'courseStructure');
     Router.add('/courses/:id', 'courseDetail');
     Router.add('/clubs',       'clubs');
+    Router.add('/login',       'login');
+    Router.add('/register',    'register');
+    Router.add('/profile',     'profile');
     Router.add('/settings',    'settings');
 
     _wireNav();
@@ -51,6 +57,7 @@ const Shell = (function(){
     Router.start(_onRouteChange);
     _syncLangButton();
     _renderLiveRecent();
+    _initAuth();
 
     document.getElementById('app-shell').classList.add('shell-ready');
     console.log('[Shell] initialized');
@@ -498,7 +505,16 @@ const Shell = (function(){
 
   function toggleLangMenu(){
     var menu = document.getElementById('sidebar-lang-menu');
-    if(menu) menu.classList.toggle('show');
+    if(!menu) return;
+    var showing = menu.classList.toggle('show');
+    if(showing){
+      var btn = document.getElementById('sidebar-btn-lang');
+      if(btn){
+        var r = btn.getBoundingClientRect();
+        menu.style.left = (r.right + 4) + 'px';
+        menu.style.bottom = (window.innerHeight - r.bottom) + 'px';
+      }
+    }
   }
 
   function setLang(lang){
@@ -531,6 +547,42 @@ const Shell = (function(){
   });
 
   // ══════════════════════════════════════════
+  // AUTH — sidebar login state
+  // ══════════════════════════════════════════
+
+  function _initAuth(){
+    if(typeof AuthState === 'undefined') return;
+    // Listen for auth state changes
+    AuthState.onChange(_updateAuthUI);
+    // Init auth (async, non-blocking)
+    AuthState.init();
+  }
+
+  function _updateAuthUI(){
+    var iconEl = document.getElementById('sidebar-auth-icon');
+    var labelEl = document.getElementById('sidebar-auth-label');
+    if(!iconEl || !labelEl) return;
+
+    if(typeof AuthState !== 'undefined' && AuthState.isLoggedIn()){
+      var user = AuthState.getUser();
+      var initial = (user && user.displayName) ? user.displayName.charAt(0).toUpperCase() : '?';
+      iconEl.textContent = initial;
+      labelEl.textContent = user.displayName || 'Profile';
+    } else {
+      iconEl.innerHTML = '&#128100;';
+      labelEl.textContent = 'Sign In';
+    }
+  }
+
+  function goAuth(){
+    if(typeof AuthState !== 'undefined' && AuthState.isLoggedIn()){
+      Router.navigate('/profile');
+    } else {
+      Router.navigate('/login');
+    }
+  }
+
+  // ══════════════════════════════════════════
   // INITIALIZATION
   // ══════════════════════════════════════════
 
@@ -557,7 +609,8 @@ const Shell = (function(){
     openSettings: openSettings,
     settingsToggle: settingsToggle,
     settingsSlider: settingsSlider,
-    settingsSelect: settingsSelect
+    settingsSelect: settingsSelect,
+    goAuth: goAuth
   };
 
 })();
