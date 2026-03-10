@@ -27,8 +27,11 @@ const Round = (function(){
   // CONSTANTS
   // ══════════════════════════════════════════
 
-  /** [TRUTH] Round-level status */
-  var ROUND_STATUS = ['planned','playing','finished'];
+  /** [TRUTH] Round-level status (v6 naming) */
+  var ROUND_STATUS = ['scheduled','in_progress','finished','abandoned'];
+
+  /** Compat mapping: old status names → v6 */
+  var STATUS_COMPAT = { 'planned':'scheduled', 'playing':'in_progress' };
 
   /** [TRUTH] Hole-level score status (Round domain) */
   var HOLE_STATUS = ['empty','valid','par','pickup','dnf','x'];
@@ -107,6 +110,13 @@ const Round = (function(){
 
   function _touch(round){ round.updatedAt = _now(); }
 
+  /** Normalize status string: apply compat mapping, validate against ROUND_STATUS */
+  function _normalizeStatus(s){
+    if(!s) return null;
+    if(STATUS_COMPAT[s]) s = STATUS_COMPAT[s];
+    return ROUND_STATUS.indexOf(s) >= 0 ? s : null;
+  }
+
   /**
    * Get par for a hole, trying multiple sources:
    *   1. courseHoles parameter (from course DB at call site)
@@ -173,7 +183,7 @@ const Round = (function(){
 
     var round = {
       id:        input.id || _genRoundId(),                        // [TRUTH]
-      status:    input.status || 'planned',                       // [TRUTH]
+      status:    _normalizeStatus(input.status) || 'scheduled',    // [TRUTH]
       date:      input.date || now.slice(0,10),                   // [TRUTH]
 
       courseId:   input.courseId || null,                          // [TRUTH] 球场引用
@@ -225,7 +235,7 @@ const Round = (function(){
 
     var round = {
       id:        raw.id || _genRoundId(),
-      status:    (ROUND_STATUS.indexOf(raw.status) >= 0) ? raw.status : 'planned',
+      status:    _normalizeStatus(raw.status) || 'scheduled',
       date:      raw.date || now.slice(0,10),
       courseId:   raw.courseId || null,
       routingId: raw.routingId || null,
@@ -510,7 +520,7 @@ const Round = (function(){
    * @param {Object} [options]
    * @param {boolean} [options.clearScores]  - keep players, reset all holes to empty
    * @param {boolean} [options.clearPlayers] - remove all players (fresh round)
-   * @param {string}  [options.status]       - override status (default: 'planned')
+   * @param {string}  [options.status]       - override status (default: 'scheduled')
    * @param {string}  [options.date]         - override date
    * @returns {Round} new Round with new id and timestamps
    */
@@ -520,7 +530,7 @@ const Round = (function(){
     var now = _now();
 
     clone.id = _genRoundId();
-    clone.status = options.status || 'planned';
+    clone.status = options.status || 'scheduled';
     clone.date = options.date || now.slice(0,10);
     clone.createdAt = now;
     clone.updatedAt = now;
@@ -659,7 +669,7 @@ const Round = (function(){
 
     return {
       id:        (sc.meta && sc.meta.roundId) || _genRoundId(),
-      status:    'playing',
+      status:    'in_progress',
       date:      (sc.meta && sc.meta.createdAt) ? sc.meta.createdAt.slice(0,10) : _now().slice(0,10),
       courseId:   course.clubId || null,
       routingId: course.routingId || null,
@@ -992,6 +1002,8 @@ const Round = (function(){
     // Constants
     ROUND_STATUS:         ROUND_STATUS,
     HOLE_STATUS:          HOLE_STATUS,
+    STATUS_COMPAT:        STATUS_COMPAT,
+    normalizeStatus:      _normalizeStatus,
     // Testing
     _selfTest:            _selfTest
   };

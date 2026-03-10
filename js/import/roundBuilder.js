@@ -50,7 +50,7 @@ const RoundBuilder = (function(){
         courseId: null,       // GolfLive has no course DB reference
         routingId: null,
         holeCount: hc,
-        status: 'playing',
+        status: 'in_progress',
         event: { name: match.event.title || '', id: '' },
         players: playerInputs,
         _courseSnapshot: snapshot

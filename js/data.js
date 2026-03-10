@@ -11,8 +11,10 @@ const D = (function(){
   const LS_WS   = 'golf_v4_workspace';
   const LS_OLD  = 'golf_v531';
   const LS_BG   = 'golf_v531_bg';
-  const LS_ROUNDS = 'golf_v5_rounds';
   const SESSION = '__session__';
+
+  // Dev mode: set D._DEV = true in console to enable _sc ↔ RoundData consistency checks
+  var _DEV = false;
 
   // ── Player status enum ──
   const PLAYER_STATUS = ['active','withdrawn','inactive','guest','deleted'];
@@ -33,7 +35,6 @@ const D = (function(){
 
   let _sc = null;   // scorecardData
   let _ws = null;   // workspaceState
-  let _rounds = null; // Round persistence store (golf_v5_rounds)
 
   // ══════════════════════════════════════════
   // DEFAULT FACTORIES
@@ -402,14 +403,9 @@ const D = (function(){
   // INITIALIZATION
   // ══════════════════════════════════════════
 
-  function defRoundsStore(){
-    return { version:'5.0', activeRoundId:null, rounds:{} };
-  }
-
   function init(){
     _sc = defScorecard();
     _ws = defWorkspace();
-    _rounds = defRoundsStore();
   }
 
   // ══════════════════════════════════════════
@@ -512,6 +508,11 @@ const D = (function(){
   // ══════════════════════════════════════════
 
   function setPlayerGross(playerId, hi, gross){
+    // 1. RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateHoleScore(rid, playerId, hi, { gross: gross });
+
+    // 2. 运行时投影 (_sc)
     ensureScores(playerId);
     var h = _sc.scores[playerId].holes[hi];
     h.gross = gross;
@@ -534,12 +535,23 @@ const D = (function(){
     var hi2 = par + 12;
     if(h.gross < lo) h.gross = lo;
     if(h.gross > hi2) h.gross = hi2;
+
+    // 1. RoundStore 权威写入（已算出最终 gross）
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateHoleScore(rid, playerId, hi, { gross: h.gross });
+
+    // 2. 运行时投影 (_sc)
     _syncStatus(h);
     _reconcileShots(h);
     _touch();
   }
 
   function clearPlayerHole(playerId, hi){
+    // 1. RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.clearHoleScore(rid, playerId, hi);
+
+    // 2. 运行时投影 (_sc)
     ensureScores(playerId);
     var h = _sc.scores[playerId].holes[hi];
     h.gross = null;
@@ -557,6 +569,8 @@ const D = (function(){
     var h = getPlayerHole(playerId, hi);
     if(!h || !h.shots[si]) return;
     var s = h.shots[si];
+
+    // Apply toggle logic on _sc first (compute final state)
     if(category === 'flags'){
       if(!Array.isArray(s.flags)) s.flags = [];
       var idx = s.flags.indexOf(value);
@@ -567,7 +581,6 @@ const D = (function(){
       }
       s.lastTag = s.flags.length > 0 ? 'flags' : null;
     } else {
-      // Single-value categories: toggle same value off, or replace
       if(s[category] === value){
         s[category] = null;
         s.lastTag = null;
@@ -576,6 +589,18 @@ const D = (function(){
         s.lastTag = category;
       }
     }
+
+    // RoundStore 权威写入（写入 toggle 后的最终态）
+    var rid = _activeRoundId();
+    if(rid){
+      var patch = { lastTag: s.lastTag };
+      if(category === 'flags'){
+        patch.flags = s.flags.slice();
+      } else {
+        patch[category] = s[category];
+      }
+      RoundStore.updateShot(rid, playerId, hi, si, patch);
+    }
     _touch();
   }
 
@@ -583,6 +608,10 @@ const D = (function(){
     var h = getPlayerHole(playerId, hi);
     if(!h || !h.shots[si]) return;
     h.shots[si].toPin = distance;
+
+    // RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateShot(rid, playerId, hi, si, { toPin: distance });
     _touch();
   }
 
@@ -590,27 +619,47 @@ const D = (function(){
     var h = getPlayerHole(playerId, hi);
     if(!h || !h.shots[si]) return;
     h.shots[si].notes = text || '';
+
+    // RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateShot(rid, playerId, hi, si, { notes: text || '' });
     _touch();
   }
 
   // ── Hole-level field mutations ──
 
   function setHolePutts(playerId, hi, putts){
+    // 1. RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateHoleScore(rid, playerId, hi, { putts: putts });
+    // 2. 运行时投影
     var h = getPlayerHole(playerId, hi);
     if(h) { h.putts = putts; _touch(); }
   }
 
   function setHolePenalties(playerId, hi, penalties){
+    // 1. RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateHoleScore(rid, playerId, hi, { penalties: penalties });
+    // 2. 运行时投影
     var h = getPlayerHole(playerId, hi);
     if(h) { h.penalties = penalties; _touch(); }
   }
 
   function setHoleStatus(playerId, hi, status){
+    // 1. RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateHoleScore(rid, playerId, hi, { status: status });
+    // 2. 运行时投影
     var h = getPlayerHole(playerId, hi);
     if(h) { h.status = status; _touch(); }
   }
 
   function setHoleNotes(playerId, hi, notes){
+    // 1. RoundStore 权威写入
+    var rid = _activeRoundId();
+    if(rid) RoundStore.updateHoleScore(rid, playerId, hi, { notes: notes || '' });
+    // 2. 运行时投影
     var h = getPlayerHole(playerId, hi);
     if(h) { h.notes = notes || ''; _touch(); }
   }
@@ -660,6 +709,40 @@ const D = (function(){
   }
 
   function _touch(){ _sc.meta.updatedAt = new Date().toISOString(); }
+
+  /** Get active round ID from RoundStore (memory-cached, no localStorage read). */
+  function _activeRoundId(){
+    return (typeof RoundStore !== 'undefined') ? RoundStore.getActiveId() : null;
+  }
+
+  /**
+   * Dev-only: assert _sc.scores gross values match RoundData.
+   * Enable with D._DEV = true in console.
+   */
+  function _assertConsistency(){
+    if(typeof RoundStore === 'undefined') return;
+    var rid = RoundStore.getActiveId();
+    if(!rid) return;
+    var rd = RoundStore.getData(rid);
+    if(!rd) return;
+    var mismatches = [];
+    for(var rpId in _sc.scores){
+      var scHoles = (_sc.scores[rpId] && _sc.scores[rpId].holes) || [];
+      var rdScores = rd.scores[rpId];
+      if(!rdScores) continue;
+      var rdHoles = rdScores.holes || [];
+      for(var i = 0; i < Math.min(scHoles.length, rdHoles.length); i++){
+        var sg = scHoles[i] ? scHoles[i].gross : null;
+        var rg = rdHoles[i] ? rdHoles[i].gross : null;
+        if(sg !== rg){
+          mismatches.push('hole ' + i + ' rpId=' + rpId + ': _sc.gross=' + sg + ' rd.gross=' + rg);
+        }
+      }
+    }
+    if(mismatches.length > 0){
+      console.warn('[D._DEV] _sc ↔ RoundData MISMATCH (' + mismatches.length + '):', mismatches);
+    }
+  }
 
   // ══════════════════════════════════════════
   // DERIVED CALCULATIONS
@@ -783,28 +866,14 @@ const D = (function(){
         localStorage.removeItem(LS_BG);
       }
     } catch(e){ console.warn('[D] save error', e); }
-    // ── Round persistence (parallel layer, does not affect _sc/_ws) ──
-    _saveRounds();
+    // ── Flush deferred score/progress writes ──
+    if(typeof RoundStore !== 'undefined') RoundStore.flushProgress();
+    // ── Sync active round scores to RoundStore (throttled, Phase A fallback) ──
+    if(typeof RoundStore !== 'undefined') RoundStore.syncFromScorecard();
+    // ── Dev assertion ──
+    if(_DEV) _assertConsistency();
   }
 
-  /**
-   * Generate Round snapshot from current _sc and persist to golf_v5_rounds.
-   * Graceful: if Round module unavailable, silently skip.
-   */
-  function _saveRounds(){
-    if(typeof Round === 'undefined') return;
-    try {
-      if(!_rounds) _rounds = defRoundsStore();
-      var roundObj = Round.fromScorecard(_sc);
-      var rid = roundObj.id;
-      // Stabilize roundId: write back to _sc.meta so next save reuses same ID
-      if(!_sc.meta) _sc.meta = {};
-      if(!_sc.meta.roundId) _sc.meta.roundId = rid;
-      _rounds.activeRoundId = rid;
-      _rounds.rounds[rid] = Round.exportRound(roundObj);
-      localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds));
-    } catch(e){ console.warn('[D] round save error', e); }
-  }
 
   function load(){
     // Priority 1: try v4 format
@@ -819,7 +888,6 @@ const D = (function(){
         _sc = parsedSc;
         _ws = parsedWs;
         try { _postLoad(); } catch(pe){ console.warn('[D] postLoad warning (data kept):', pe); }
-        _loadRounds();
         console.log('[D] loaded v4 data');
         return 'v4';
       } catch(e){ console.warn('[D] v4 parse error, trying v531', e); }
@@ -834,7 +902,6 @@ const D = (function(){
         _ws = result.workspace;
         _ws.userBg = localStorage.getItem(LS_BG) || null;
         _postLoad();
-        _loadRounds();
         console.log('[D] migrated from v531 to v4');
         // Save in v4 format immediately
         save();
@@ -846,31 +913,6 @@ const D = (function(){
     return 'fresh';
   }
 
-  /**
-   * Restore Round store from localStorage.
-   * Does NOT affect _sc / _ws — parallel layer only.
-   */
-  function _loadRounds(){
-    try {
-      var raw = localStorage.getItem(LS_ROUNDS);
-      if(raw){
-        var parsed = JSON.parse(raw);
-        if(parsed && parsed.version && parsed.rounds){
-          _rounds = parsed;
-          // Normalize rounds via Round module if available
-          if(typeof Round !== 'undefined'){
-            for(var rid in _rounds.rounds){
-              _rounds.rounds[rid] = Round.normalizeRound(_rounds.rounds[rid]);
-            }
-          }
-          console.log('[D] loaded rounds store, active:', _rounds.activeRoundId,
-                      'count:', Object.keys(_rounds.rounds).length);
-          return;
-        }
-      }
-    } catch(e){ console.warn('[D] rounds load error', e); }
-    _rounds = defRoundsStore();
-  }
 
   function _postLoad(){
     // Structural integrity
@@ -1271,74 +1313,97 @@ const D = (function(){
   }
 
   // ══════════════════════════════════════════
-  // ROUND STORE ACCESSORS
+  // ROUND STORE DELEGATES (→ RoundStore)
   // ══════════════════════════════════════════
 
-  /** Get the full rounds store (read-only intent). */
-  function getRoundsStore(){ return _rounds || defRoundsStore(); }
-
-  /** Get the active round ID (or null). */
+  /** @deprecated Use RoundStore.getActiveId() */
   function getActiveRoundId(){
-    return _rounds ? _rounds.activeRoundId : null;
+    return typeof RoundStore !== 'undefined' ? RoundStore.getActiveId() : null;
   }
 
-  /** Get the active Round object (or null). */
+  /** @deprecated Use RoundStore.get() + RoundStore.getData() */
   function getActiveRound(){
-    if(!_rounds || !_rounds.activeRoundId) return null;
-    return _rounds.rounds[_rounds.activeRoundId] || null;
+    var id = getActiveRoundId();
+    return id ? _buildLegacyRound(id) : null;
   }
 
-  /** Get a specific round by ID (or null). */
+  /** @deprecated Use RoundStore.get() + RoundStore.getData() */
   function getRound(id){
-    if(!_rounds || !id) return null;
-    return _rounds.rounds[id] || null;
+    return _buildLegacyRound(id);
   }
 
-  /** List all round IDs. */
+  /**
+   * Build a legacy Round-shaped object from RoundStore Summary + Data.
+   * Provides backward compat for code that expects the old Round object shape.
+   */
+  function _buildLegacyRound(id){
+    if(!id || typeof RoundStore === 'undefined') return null;
+    var summary = RoundStore.get(id);
+    if(!summary) return null;
+    var data = RoundStore.getData(id);
+
+    var r = {
+      id:         id,
+      status:     summary.status,
+      date:       summary.date,
+      courseId:    summary.courseId,
+      routingId:  null,
+      holeCount:  summary.holesPlanned || 18,
+      players:    data ? (data.playersSnapshot || []) : [],
+      scores:     data ? (data.scores || {}) : {},
+      shots:      data ? (data.shots || {}) : {},
+      game:       { type:null, options:{} },
+      event:      { name: summary.courseName || '', id:'' },
+      notes:      '',
+      createdAt:  summary.createdAt,
+      updatedAt:  summary.updatedAt,
+      _courseSnapshot: data ? (data.courseSnapshot || null) : null,
+      // Extended metadata
+      _clubName:     summary.courseName,
+      _routingName:  summary.routingName,
+      _routeMode:    summary.routeMode,
+      _routeSummary: summary.routeSummary,
+      _teeTime:      summary.teeTime
+    };
+    return r;
+  }
+
+  /** @deprecated Use RoundStore.list() */
   function listRoundIds(){
-    if(!_rounds) return [];
-    return Object.keys(_rounds.rounds);
+    if(typeof RoundStore === 'undefined') return [];
+    return RoundStore.list().map(function(s){ return s.id; });
   }
 
-  /**
-   * Insert or overwrite a round in the store. Cannot overwrite the active round.
-   * @param {Object} round - Round object (must have .id)
-   * @returns {boolean} true if stored
-   */
+  /** @deprecated Use RoundStore.putRound() */
   function putRound(round){
-    if(!_rounds || !round || !round.id) return false;
-    if(round.id === _rounds.activeRoundId) return false; // safety
-    _rounds.rounds[round.id] = round;
-    try { localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds)); } catch(e){}
+    if(typeof RoundStore === 'undefined' || !round || !round.id) return false;
+    // Prevent overwriting the active round via this legacy API
+    if(round.id === RoundStore.getActiveId()) return false;
+    RoundStore.putRound(round, round._courseSnapshot);
     return true;
   }
 
-  /**
-   * Delete a round by ID. Cannot delete the active round.
-   * @returns {boolean} true if deleted
-   */
+  /** @deprecated Use RoundStore.remove() */
   function deleteRound(id){
-    if(!_rounds || !id) return false;
-    if(id === _rounds.activeRoundId) return false; // safety
-    if(!_rounds.rounds[id]) return false;
-    delete _rounds.rounds[id];
-    try { localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds)); } catch(e){}
+    if(typeof RoundStore === 'undefined' || !id) return false;
+    RoundStore.remove(id);
     return true;
   }
 
   /**
-   * Clear all rounds (active + stored) and reset scorecard/workspace.
-   * Used to purge legacy data from before the account system.
+   * Clear all rounds and reset scorecard/workspace.
    */
   function clearAllRounds(){
-    _rounds = defRoundsStore();
+    // Clear RoundStore
+    if(typeof RoundStore !== 'undefined'){
+      RoundStore.list().forEach(function(s){ RoundStore.remove(s.id); });
+      RoundStore.setActive(null);
+    }
     _sc = defScorecard();
     _ws = defWorkspace();
     try {
-      localStorage.setItem(LS_ROUNDS, JSON.stringify(_rounds));
       localStorage.setItem(LS_SC, JSON.stringify(_sc));
       localStorage.setItem(LS_WS, JSON.stringify(_ws));
-      // Also purge legacy v531 data and background
       localStorage.removeItem(LS_OLD);
       localStorage.removeItem(LS_BG);
     } catch(e){}
@@ -1380,8 +1445,8 @@ const D = (function(){
     migrateTeamField:migrateTeamField, migrateColor:migrateColor,
     // Persistence
     save:save, load:load,
-    // Round store
-    getRoundsStore:getRoundsStore, getActiveRoundId:getActiveRoundId,
+    // Round store delegates (→ RoundStore, deprecated)
+    getActiveRoundId:getActiveRoundId,
     getActiveRound:getActiveRound, getRound:getRound,
     listRoundIds:listRoundIds, putRound:putRound, deleteRound:deleteRound, clearAllRounds:clearAllRounds,
     // Legacy compat
@@ -1394,7 +1459,9 @@ const D = (function(){
     // Export/Import
     exportScorecard:exportScorecard, importScorecard:importScorecard,
     // Constants
-    SESSION:SESSION, PLAYER_STATUS:PLAYER_STATUS
+    SESSION:SESSION, PLAYER_STATUS:PLAYER_STATUS,
+    // Dev
+    get _DEV(){ return _DEV; }, set _DEV(v){ _DEV = !!v; }
   };
 
 })();

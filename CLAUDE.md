@@ -34,12 +34,13 @@ GolfOverlay/
 │   ├── data.js         # v4.0 统一数据访问层（最先加载）
 │   ├── roundTypes.js   # Round 类型定义（JSDoc only，无运行时代码）
 │   ├── round.js        # Round 数据模型（纯函数，data.js 之后加载）
-│   ├── courseDatabase.js # 球场数据管理层
+│   ├── roundStore.js   # Round 持久层（Summary + Data 分层，一级实体）
+│   ├── roundIndex.js   # Round 查询索引（byPlayer/byCourse/byDate/byStatus）
 │   ├── scoreboard.js   # 计分卡逻辑
 │   ├── ui.js           # 界面操作
+│   ├── clubStore.js    # Club球会主数据CRUD + localStorage持久化（唯一数据源）
+│   ├── courseRouting.js # 球场路由工具（基于ClubStore，替代courseDatabase.js）
 │   ├── roundManager.js # Round状态管理
-│   ├── coursePicker.js # 球场选择器UI
-│   ├── clubStore.js    # Club球会主数据CRUD + localStorage持久化
 │   ├── newRoundService.js # New Round 创建服务（纯逻辑，无UI）
 │   ├── sessionIO.js   # 球局JSON导入导出
 │   ├── import/          # GolfLive成绩导入模块
@@ -57,7 +58,8 @@ GolfOverlay/
 │   │   ├── courseDetailPage.js # Club 详情/编辑页面
 │   │   ├── courseStructureEditor.js # 3列结构编辑器
 │   │   ├── courseImportPage.js # GolfLive球场批量导入页面
-│   │   └── newRoundPage.js    # New Round 创建页面
+│   │   ├── newRoundPage.js    # New Round 创建页面
+│   │   └── roundHelper.js     # Round 数据桥接（RoundStore → 页面展示）
 │   └── app.js          # 应用核心（Overlay Center 逻辑）
 ├── assets/
 │   └── icons/          # 图标资源（备用）
@@ -115,18 +117,19 @@ v4.0 统一数据访问层（IIFE `D`），无依赖：
 <script src="js/data.js"></script>            <!-- v4.0 数据层，无依赖 -->
 <script src="js/roundTypes.js"></script>     <!-- JSDoc 类型定义，无运行时代码 -->
 <script src="js/round.js"></script>          <!-- Round 数据模型，纯函数，无依赖 -->
-<script src="js/courseDatabase.js"></script>  <!-- 无依赖 -->
+<script src="js/roundStore.js"></script>     <!-- Round 持久层，依赖 round.js -->
+<script src="js/roundIndex.js"></script>     <!-- Round 查询索引，依赖 roundStore.js -->
 <script src="js/scoreboard.js"></script>      <!-- 无依赖 -->
 <script src="js/ui.js"></script>              <!-- 依赖 scoreboard.js, data.js -->
-<script src="js/roundManager.js"></script>    <!-- 依赖 courseDatabase.js -->
-<script src="js/coursePicker.js"></script>    <!-- 依赖 courseDatabase.js + roundManager.js + data.js -->
+<script src="js/clubStore.js"></script>       <!-- Club 球会 CRUD（唯一数据源），依赖 data.js -->
+<script src="js/courseRouting.js"></script>   <!-- 球场路由工具，依赖 clubStore.js -->
+<script src="js/roundManager.js"></script>    <!-- 依赖 clubStore.js + courseRouting.js -->
 <script src="js/sessionIO.js"></script>      <!-- 依赖 data.js -->
 <script src="js/import/importTypes.js"></script>     <!-- 无依赖，JSDoc only -->
 <script src="js/import/fileSniffer.js"></script>     <!-- 无依赖 -->
 <script src="js/import/golfliveParser.js"></script>  <!-- 依赖 SheetJS (XLSX) -->
 <script src="js/import/roundBuilder.js"></script>    <!-- 依赖 data.js -->
 <script src="js/import/importController.js"></script><!-- 依赖以上 import 模块 + UI -->
-<script src="js/clubStore.js"></script>       <!-- Club 球会 CRUD，依赖 data.js -->
 <script src="js/newRoundService.js"></script> <!-- New Round 服务，依赖 D + Round + ClubStore -->
 <script src="js/app.js"></script>             <!-- 依赖所有以上 -->
 <!-- App Shell（app.js init 完成后加载） -->
@@ -138,6 +141,7 @@ v4.0 统一数据访问层（IIFE `D`），无依赖：
 <script src="js/shell/courseStructureEditor.js"></script><!-- 结构编辑器，依赖 clubStore.js -->
 <script src="js/shell/courseImportPage.js"></script><!-- GolfLive球场导入，依赖 clubStore.js -->
 <script src="js/shell/newRoundPage.js"></script><!-- New Round 页面，依赖 NewRoundService -->
+<script src="js/shell/roundHelper.js"></script><!-- Round 数据桥接，依赖 RoundStore -->
 <script src="js/shell/shell.js"></script>     <!-- Shell 控制器，依赖以上 shell 模块 -->
 ```
 

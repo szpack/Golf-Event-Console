@@ -1,133 +1,74 @@
 // ============================================================
 // roundHelper.js — Shared Round summary helpers
 // Used by homePage.js and roundsPage.js
-// Depends on: data.js (D API), round.js (optional)
+// Depends on: RoundStore, data.js (D API for active round compat)
 // ============================================================
 
 const RoundHelper = (function(){
 
   /**
-   * Build a summary object for the current active round from D.sc().
+   * Build a summary object for the current active round.
+   * Reads from RoundStore Summary, enriched with live D.sc() progress.
    * @returns {RoundSummary|null}
    */
   function getActiveSummary(){
-    if(typeof D === 'undefined') return null;
-    var sc = D.sc();
-    if(!sc || !sc.course || !sc.course.clubId) return null;
+    if(typeof RoundStore === 'undefined') return null;
+    var activeId = RoundStore.getActiveId();
+    if(!activeId) return null;
 
-    var players = sc.players || [];
-    if(players.length === 0 && (!sc.scores || Object.keys(sc.scores).length === 0)) return null;
+    var summary = RoundStore.get(activeId);
+    if(!summary) return null;
 
-    var hc = sc.course.holeCount || 18;
-    var id = (sc.meta && sc.meta.roundId) || D.getActiveRoundId() || 'current';
-
-    var playedCount = 0;
-    if(players.length > 0){
-      playedCount = D.playedCount(D.rpid(players[0]), 0, hc - 1);
-    }
-
-    var playerNames = players.map(function(p){
-      return D.playerDisplayName(p);
-    });
-
-    var status = 'playing';
-    var gameplay = null;
-    if(typeof Round !== 'undefined'){
-      var ar = D.getActiveRound();
-      if(ar){
-        status = ar.status || 'playing';
-        if(ar.game && ar.game.type) gameplay = ar.game.type;
+    // Enrich with live progress from D.sc()
+    if(typeof D !== 'undefined'){
+      var sc = D.sc();
+      var players = sc.players || [];
+      if(players.length > 0){
+        var hc = sc.course ? (sc.course.holeCount || 18) : 18;
+        summary.playedCount = D.playedCount(D.rpid(players[0]), 0, hc - 1);
+        summary.playerNames = players.map(function(p){ return D.playerDisplayName(p); });
+        summary.playerCount = players.length;
+      }
+      // Course name from D.sc() may be richer
+      if(sc.course && sc.course.courseName && !summary.courseName){
+        summary.courseName = sc.course.courseName;
       }
     }
 
-    return {
-      id: id,
-      courseName: sc.course.courseName || '',
-      routingName: sc.course.routingName || '',
-      playerCount: players.length,
-      holeCount: hc,
-      playedCount: playedCount,
-      playerNames: playerNames,
-      date: (sc.meta && sc.meta.createdAt) ? sc.meta.createdAt.slice(0, 10) : '',
-      status: status,
-      gameplay: gameplay,
-      isActive: true
-    };
+    summary.isActive = true;
+    return summary;
   }
 
   /**
-   * Build a summary object from a stored Round object.
-   * @param {Object} r - Round object from D.getRound(id)
-   * @param {string} rid - Round ID
-   * @returns {RoundSummary}
-   */
-  function fromStoredRound(r, rid){
-    var pc = 0;
-    var playerNames = [];
-    if(r.players && r.players.length > 0){
-      playerNames = r.players.map(function(p){ return p.name || ''; });
-      if(r.scores){
-        var rpId = r.players[0].roundPlayerId;
-        var holes = r.scores[rpId] ? (r.scores[rpId].holes || []) : [];
-        holes.forEach(function(h){ if(h && h.gross !== null) pc++; });
-      }
-    }
-    var courseName = '';
-    if(r._courseSnapshot && r._courseSnapshot.length > 0){
-      // No course name in snapshot — try event
-    }
-    if(r.event && r.event.name) courseName = r.event.name;
-
-    return {
-      id: rid,
-      courseName: courseName,
-      routingName: '',
-      playerCount: (r.players || []).length,
-      holeCount: r.holeCount || 18,
-      playedCount: pc,
-      playerNames: playerNames,
-      date: r.date || '',
-      status: r.status || 'finished',
-      gameplay: (r.game && r.game.type) || null,
-      isActive: false
-    };
-  }
-
-  /**
-   * Get non-active rounds from the Round store.
+   * Get non-active rounds from RoundStore.
    * @param {number} [limit] - max results (default all)
    * @returns {RoundSummary[]}
    */
   function getStoredRounds(limit){
-    if(typeof D === 'undefined') return [];
-    var ids = D.listRoundIds();
-    var activeId = D.getActiveRoundId();
-    var rounds = [];
-    ids.forEach(function(rid){
-      if(rid === activeId) return;
-      var r = D.getRound(rid);
-      if(!r) return;
-      rounds.push(fromStoredRound(r, rid));
-    });
-    rounds.sort(function(a, b){
-      return b.date < a.date ? -1 : b.date > a.date ? 1 : 0;
-    });
-    if(limit) rounds = rounds.slice(0, limit);
-    return rounds;
+    if(typeof RoundStore === 'undefined') return [];
+    var all = RoundStore.list({ sortBy:'updatedAt', sortOrder:'desc' });
+    var activeId = RoundStore.getActiveId();
+    var result = [];
+    for(var i = 0; i < all.length; i++){
+      if(all[i].id === activeId) continue;
+      result.push(all[i]);
+      if(limit && result.length >= limit) break;
+    }
+    return result;
   }
 
   // ── Shared formatting ──
 
-  var STATUS_LABELS = { planned:'Planned', playing:'Playing', finished:'Finished' };
+  var STATUS_LABELS = {
+    scheduled:'Scheduled', in_progress:'Playing', finished:'Finished', abandoned:'Abandoned',
+    // Legacy compat
+    planned:'Scheduled', playing:'Playing'
+  };
 
   function statusLabel(s){
     return STATUS_LABELS[s] || s || 'Unknown';
   }
 
-  /**
-   * Format player names with truncation.
-   * Shows max 3 names, then "+ N more".
-   */
   function formatPlayerNames(names){
     if(!names || names.length === 0) return '';
     var MAX = 3;
@@ -138,34 +79,68 @@ const RoundHelper = (function(){
     return result;
   }
 
-  /**
-   * Format the meta line: "N players · N holes · X/Y played"
-   */
   function formatMeta(r){
     var parts = [];
     parts.push(r.playerCount + (r.playerCount === 1 ? ' player' : ' players'));
-    parts.push(r.holeCount + ' holes');
-    if(r.playedCount > 0){
-      parts.push(r.playedCount + '/' + r.holeCount + ' played');
+    var hc = r.holesPlanned || r.holeCount || 18;
+    parts.push(hc + ' holes');
+    var played = r.playedCount || r.holesCompleted || 0;
+    if(played > 0){
+      parts.push(played + '/' + hc + ' played');
     }
     return parts.join(' &middot; ');
   }
 
-  /**
-   * Format gameplay type for display.
-   */
   function formatGameplay(type){
     if(!type) return null;
     var map = {
-      'stroke':     'Stroke Play',
-      'match':      'Match Play',
-      'stableford': 'Stableford',
-      'skins':      'Skins',
-      'bestball':   'Best Ball',
-      'scramble':   'Scramble',
-      'nassau':     'Nassau'
+      'stroke':'Stroke Play', 'match':'Match Play', 'stableford':'Stableford',
+      'skins':'Skins', 'bestball':'Best Ball', 'scramble':'Scramble', 'nassau':'Nassau'
     };
     return map[type] || type;
+  }
+
+  /**
+   * Format derivedStats for a single player as a short text line.
+   * @param {Object} pStats - playerStats entry from derivedStats
+   * @returns {string} e.g. "78 (+6) · 2B 5P 8Bo 3D+ · 32 putts"
+   */
+  function formatPlayerStats(pStats){
+    if(!pStats) return '';
+    var parts = [];
+    // Gross + toPar
+    var grossStr = '' + pStats.totalGross;
+    if(pStats.toPar > 0) grossStr += ' (+' + pStats.toPar + ')';
+    else if(pStats.toPar < 0) grossStr += ' (' + pStats.toPar + ')';
+    else grossStr += ' (E)';
+    parts.push(grossStr);
+
+    // Score distribution
+    var dist = [];
+    if(pStats.birdieOrBetter) dist.push(pStats.birdieOrBetter + 'B');
+    if(pStats.pars) dist.push(pStats.pars + 'P');
+    if(pStats.bogeys) dist.push(pStats.bogeys + 'Bo');
+    if(pStats.doublePlus) dist.push(pStats.doublePlus + 'D+');
+    if(dist.length > 0) parts.push(dist.join(' '));
+
+    // Putts
+    if(pStats.totalPutts > 0) parts.push(pStats.totalPutts + ' putts');
+
+    return parts.join(' &middot; ');
+  }
+
+  /**
+   * Format lightweight summaryStats for list cards (totalGross + toPar only).
+   * @param {Object} p - { totalGross, toPar }
+   * @returns {string} e.g. "78 (+6)"
+   */
+  function formatSummaryStats(p){
+    if(!p || p.totalGross == null) return '';
+    var s = '' + p.totalGross;
+    if(p.toPar > 0) s += ' (+' + p.toPar + ')';
+    else if(p.toPar < 0) s += ' (' + p.toPar + ')';
+    else s += ' (E)';
+    return s;
   }
 
   function esc(s){
@@ -176,12 +151,13 @@ const RoundHelper = (function(){
 
   return {
     getActiveSummary: getActiveSummary,
-    fromStoredRound: fromStoredRound,
     getStoredRounds: getStoredRounds,
     statusLabel: statusLabel,
     formatPlayerNames: formatPlayerNames,
     formatMeta: formatMeta,
     formatGameplay: formatGameplay,
+    formatPlayerStats: formatPlayerStats,
+    formatSummaryStats: formatSummaryStats,
     esc: esc
   };
 

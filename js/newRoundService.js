@@ -76,7 +76,7 @@ const NewRoundService = (function(){
    * @returns {{ status: string, activate: boolean }}
    */
   function resolveStatus(teeTime){
-    if(!teeTime) return { status: 'playing', activate: true };
+    if(!teeTime) return { status: 'in_progress', activate: true };
 
     var teeDate = new Date(teeTime);
     var now = new Date();
@@ -88,9 +88,9 @@ const NewRoundService = (function(){
       String(teeDate.getDate()).padStart(2, '0');
 
     if(teeStr === todayStr){
-      return { status: 'playing', activate: true };
+      return { status: 'in_progress', activate: true };
     }
-    return { status: 'planned', activate: false };
+    return { status: 'scheduled', activate: false };
   }
 
   // ══════════════════════════════════════════
@@ -247,7 +247,13 @@ const NewRoundService = (function(){
     var ws = D.ws();
     var count = result.holeCount;
 
-    // ── Course fields ──
+    // ── Write to RoundStore (source of truth) ──
+    if(typeof RoundStore !== 'undefined'){
+      RoundStore.putRound(round, snapshot);
+      RoundStore.setActive(round.id);
+    }
+
+    // ── Sync to D.sc() (runtime projection / compat layer) ──
     sc.course.clubId            = round.courseId;
     sc.course.routingId         = round.routingId;
     sc.course.clubName          = result.courseName;
@@ -258,13 +264,11 @@ const NewRoundService = (function(){
     sc.course.holeCount         = count;
     sc.course.holeSnapshot      = snapshot.slice();
 
-    // ── Meta ──
     sc.meta.roundId   = round.id;
     sc.meta.createdAt = round.createdAt;
     sc.meta.updatedAt = round.updatedAt;
     sc.meta.clubId    = round.courseId;
 
-    // ── Players ──
     sc.players = [];
     sc.scores  = {};
     for(var i = 0; i < round.players.length; i++){
@@ -303,9 +307,9 @@ const NewRoundService = (function(){
 
   function storeScheduledRound(result){
     var round = result.round;
-    // Use D.putRound for non-active rounds
-    // putRound refuses to overwrite activeRoundId, which is correct here
-    D.putRound(round);
+    if(typeof RoundStore !== 'undefined'){
+      RoundStore.putRound(round, result.snapshot);
+    }
     console.log('[NewRoundService] Scheduled round stored: ' + round.id);
   }
 

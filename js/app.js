@@ -2215,11 +2215,11 @@ function loadSaved(){
     LANG=D.ws().lang||'en';
     D.syncS(S);
     console.log('[app] loaded data:', result);
-    // activeRound is restored later after CourseDatabase loads
+    // activeRound is restored later after ClubStore seed completes
   } catch(e){ console.warn('loadSaved error',e); }
 }
 
-/** Restore active round from course snapshot after CourseDatabase is ready */
+/** Restore active round from course snapshot after ClubStore is ready */
 function restoreActiveRound(){
   const cs=D.sc().course;
   if(cs.clubId && cs.routingId){
@@ -2259,6 +2259,15 @@ function restoreActiveRound(){
       D.syncS(S);
       miniToast('Round restore error — manual mode', true);
     }
+  }
+}
+
+// ============================================================
+// COURSE PICKER STUB — redirect to shell new round page
+// ============================================================
+function openCoursePicker(){
+  if(typeof Shell !== 'undefined' && Shell.navigate){
+    Shell.navigate('#/new-round');
   }
 }
 
@@ -4533,11 +4542,12 @@ function init(){
   initCanvas();
   wireAll();
 
-  // Load course database in background; restore active round when ready
-  CourseDatabase.load().then(()=>{
+  // Seed ClubStore from courses.json if empty (first-time setup), then restore active round
+  ClubStore.seedFromJSON().then(()=>{
     restoreActiveRound();
   }).catch(e=>{
-    console.warn('[init] CourseDatabase load skipped:', e.message);
+    console.warn('[init] ClubStore seed skipped:', e.message);
+    restoreActiveRound();
   });
 
   // Sync UI

@@ -956,9 +956,10 @@ html.light .sb-lang-menu button:hover { background: var(--bg-hover); }
   letter-spacing: 0.03em;
 }
 
-.sh-status-planned { background: rgba(96,165,250,0.15); color: #60a5fa; }
-.sh-status-playing { background: rgba(74,222,128,0.15); color: #4ade80; }
+.sh-status-planned, .sh-status-scheduled { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.sh-status-playing, .sh-status-in_progress { background: rgba(74,222,128,0.15); color: #4ade80; }
 .sh-status-finished { background: rgba(107,114,128,0.15); color: #9ca3af; }
+.sh-status-abandoned { background: rgba(239,68,68,0.15); color: #ef4444; }
 
 .sh-card-date {
   font-size: 12px;
@@ -1003,6 +1004,22 @@ html.light .sb-lang-menu button:hover { background: var(--bg-hover); }
 
 .sh-more { color: #71717a; font-size: 12px; }
 
+.sh-card-stats {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #1a1a2e;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+.sh-stat-line { line-height: 1.6; }
+.sh-abandon-reason {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #ef4444;
+  font-style: italic;
+}
+
 .sh-card-actions {
   display: flex;
   gap: 8px;
@@ -1044,6 +1061,81 @@ html.light .sb-lang-menu button:hover { background: var(--bg-hover); }
 
 .sh-btn-danger { color: #f87171; border-color: rgba(248,113,113,0.2); }
 .sh-btn-danger:hover { background: rgba(248,113,113,0.08); }
+
+/* ── My Rounds: Filters ── */
+.mr-filters {
+  margin-bottom: 16px;
+}
+
+.mr-status-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mr-tab {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.mr-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.mr-tab-active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.mr-filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mr-select {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 140px;
+}
+
+.mr-select:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+.mr-search {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* ── My Rounds: Round list ── */
+.sh-round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
 /* ── Quick Actions ── */
 .sh-actions {
@@ -1534,9 +1626,10 @@ html.light .sh-card-title { color: #1a1a1a; }
 html.light .sh-card-date { color: #9ca3af; }
 
 /* Status badges */
-html.light .sh-status-planned { background: rgba(37,99,235,0.08); color: #2563eb; }
-html.light .sh-status-playing { background: rgba(22,163,106,0.08); color: #16a34a; }
+html.light .sh-status-planned, html.light .sh-status-scheduled { background: rgba(37,99,235,0.08); color: #2563eb; }
+html.light .sh-status-playing, html.light .sh-status-in_progress { background: rgba(22,163,106,0.08); color: #16a34a; }
 html.light .sh-status-finished { background: rgba(107,114,128,0.08); color: #6b7280; }
+html.light .sh-status-abandoned { background: rgba(239,68,68,0.08); color: #dc2626; }
 
 /* Hero card */
 html.light .sh-hero-card { background: #fff; border-color: var(--accent-green); }
@@ -1560,6 +1653,12 @@ html.light .sh-btn-confirm-del { background: rgba(220,38,38,0.04) !important; co
 /* Pills */
 html.light .sh-mgmt-pill { background: #fff; border-color: rgba(0,0,0,0.06); color: #6b7280; }
 html.light .sh-mgmt-pill:hover { background: #fafafa; color: #1a1a1a; }
+
+/* My Rounds filters */
+html.light .mr-tab { color: #6b7280; }
+html.light .mr-tab:hover { background: rgba(0,0,0,0.04); color: #374151; }
+html.light .mr-tab-active { background: rgba(0,0,0,0.06); color: #1a1a1a; border-color: rgba(0,0,0,0.08); }
+html.light .mr-select { background: #fff; border-color: rgba(0,0,0,0.08); color: #1a1a1a; }
 
 /* Search */
 html.light .sh-search-input { background: #fff; border-color: rgba(0,0,0,0.08); color: #1a1a1a; }

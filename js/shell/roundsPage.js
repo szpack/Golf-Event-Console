@@ -1,6 +1,7 @@
 // ============================================================
-// roundsPage.js — Rounds List Page Renderer
-// Depends on: roundHelper.js, data.js (D API), round.js (Round)
+// roundsPage.js — My Rounds Page
+// Query-based rendering via RoundIndex + RoundStore (no full scan).
+// Depends on: RoundIndex, RoundStore, RoundHelper, data.js, round.js
 // ============================================================
 
 const RoundsPage = (function(){
@@ -8,18 +9,99 @@ const RoundsPage = (function(){
   var H = null;
   function _h(){ if(!H) H = RoundHelper; return H; }
 
-  // ── State ──
-  var _searchTerm = '';
-  var _confirmingId = null;  // round id pending delete confirm
+  // ── Filter state ──
+  var _statusFilter = null;   // null = all, or string
+  var _courseFilter  = null;   // null = all, or courseId string
+  var _searchTerm   = '';
+
+  // ── Delete confirm state ──
+  var _confirmingId = null;
   var _confirmTimer = null;
 
-  // ── Status group order ──
-  function _groups(){
-    return [
-      { key:'playing',  label:T('playingLbl') },
-      { key:'planned',  label:T('plannedLbl') },
-      { key:'finished', label:T('finishedLbl') }
-    ];
+  // ── Status tabs ──
+  var STATUS_TABS = [
+    { key: null,           label: 'All' },
+    { key: 'in_progress',  label: 'Playing' },
+    { key: 'scheduled',    label: 'Scheduled' },
+    { key: 'finished',     label: 'Finished' },
+    { key: 'abandoned',    label: 'Abandoned' }
+  ];
+
+  // ══════════════════════════════════════════
+  // DATA FETCH (index-based, no full scan)
+  // ══════════════════════════════════════════
+
+  /**
+   * Query round IDs via RoundIndex, then resolve Summaries from RoundStore.
+   * @returns {RoundSummary[]}
+   */
+  function _queryRounds(){
+    if(typeof RoundIndex === 'undefined' || typeof RoundStore === 'undefined') return [];
+
+    var opts = {
+      sortBy:    'updatedAt',
+      sortOrder: 'desc'
+    };
+
+    if(_statusFilter){
+      opts.status = _statusFilter;
+    }
+    if(_courseFilter){
+      opts.courseId = _courseFilter;
+    }
+
+    var ids = RoundIndex.query(opts);
+
+    // Resolve IDs → Summaries
+    var results = [];
+    var activeId = RoundStore.getActiveId();
+    for(var i = 0; i < ids.length; i++){
+      var s = RoundStore.get(ids[i]);
+      if(!s) continue;
+
+      // Enrich active round with live data
+      if(s.id === activeId){
+        s = _enrichActive(s);
+      }
+      results.push(s);
+    }
+
+    return results;
+  }
+
+  /** Enrich active round summary with live D.sc() progress. */
+  function _enrichActive(summary){
+    if(typeof D === 'undefined') return summary;
+    var sc = D.sc();
+    var players = sc.players || [];
+    if(players.length > 0){
+      var hc = sc.course ? (sc.course.holeCount || 18) : 18;
+      summary.playedCount = D.playedCount(D.rpid(players[0]), 0, hc - 1);
+      summary.playerNames = players.map(function(p){ return D.playerDisplayName(p); });
+      summary.playerCount = players.length;
+    }
+    if(sc.course && sc.course.courseName && !summary.courseName){
+      summary.courseName = sc.course.courseName;
+    }
+    summary.isActive = true;
+    return summary;
+  }
+
+  /** Build unique course list from index for the filter dropdown. */
+  function _getCourseOptions(){
+    if(typeof RoundIndex === 'undefined') return [];
+    // Query all rounds to get unique courseIds
+    var allIds = RoundIndex.query({});
+    var seen = {};
+    var options = [];
+    for(var i = 0; i < allIds.length; i++){
+      var s = RoundStore.get(allIds[i]);
+      if(!s || !s.courseId || seen[s.courseId]) continue;
+      seen[s.courseId] = true;
+      options.push({ id: s.courseId, name: s.courseName || s.courseId });
+    }
+    options.sort(function(a, b){ return a.name.localeCompare(b.name); });
+    return options;
   }
 
   // ══════════════════════════════════════════
@@ -31,82 +113,94 @@ const RoundsPage = (function(){
     if(!el) return;
     if(!Shell.requireAuth('page-rounds-content')) return;
 
-    var active = _h().getActiveSummary();
-    var stored = _h().getStoredRounds();
-
-    // Merge all into one list
-    var all = [];
-    if(active) all.push(active);
-    stored.forEach(function(r){ all.push(r); });
-
+    var all = _queryRounds();
     var html = '';
 
-    // ── Header with search ──
+    // ── Header ──
     html += '<div class="sh-page-header">';
     html += '<h1 class="sh-page-title">' + T('roundsTitle') + '</h1>';
     html += '<div class="sh-header-right">';
-    if(all.length > 0){
-      html += '<input type="text" class="sh-search-input" id="rounds-search" placeholder="' + T('searchPh') + '" value="' + _esc(_searchTerm) + '" oninput="RoundsPage.onSearch(this.value)">';
-    }
     html += '<button class="sh-btn-primary" onclick="Shell.showNewRound()">' + T('newRoundBtn2') + '</button>';
     html += '</div>';
     html += '</div>';
 
-    if(all.length === 0){
-      html += '<div class="sh-empty-state">';
-      html += '<div class="sh-empty-icon">&#9971;</div>';
-      html += '<div class="sh-empty-text">' + T('noRoundsYet') + '</div>';
-      html += '<button class="sh-btn-primary" onclick="Shell.showNewRound()">' + T('createFirstRound') + '</button>';
-      html += '</div>';
-      el.innerHTML = html;
-      return;
-    }
+    // ── Filters ──
+    html += _renderFilters(all.length);
 
-    // ── Filter ──
-    var filtered = _filter(all, _searchTerm);
+    // ── Apply text search ──
+    var filtered = _searchTerm ? _textFilter(all, _searchTerm) : all;
 
     if(filtered.length === 0){
-      html += '<div class="sh-empty">';
-      html += T('noMatchingRounds');
-      html += '</div>';
+      if(all.length === 0 && !_statusFilter && !_courseFilter){
+        html += '<div class="sh-empty-state">';
+        html += '<div class="sh-empty-icon">&#9971;</div>';
+        html += '<div class="sh-empty-text">' + T('noRoundsYet') + '</div>';
+        html += '<button class="sh-btn-primary" onclick="Shell.showNewRound()">' + T('createFirstRound') + '</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="sh-empty">' + T('noMatchingRounds') + '</div>';
+      }
       el.innerHTML = html;
       return;
     }
 
-    // ── Group by status ──
-    var groups = {};
-    filtered.forEach(function(r){
-      var k = r.status || 'finished';
-      if(!groups[k]) groups[k] = [];
-      groups[k].push(r);
-    });
-
-    // Sort each group by date descending
-    for(var k in groups){
-      groups[k].sort(function(a, b){
-        return b.date < a.date ? -1 : b.date > a.date ? 1 : 0;
-      });
+    // ── Cards ──
+    html += '<div class="sh-round-list">';
+    for(var i = 0; i < filtered.length; i++){
+      html += _renderCard(filtered[i]);
     }
-
-    // Render groups in order
-    _groups().forEach(function(g){
-      var items = groups[g.key];
-      if(!items || items.length === 0) return;
-
-      html += '<div class="sh-round-group">';
-      html += '<div class="sh-group-header">';
-      html += '<span class="sh-group-title">' + g.label + '</span>';
-      html += '<span class="sh-group-count">' + items.length + '</span>';
-      html += '</div>';
-      items.forEach(function(r){ html += _renderCard(r); });
-      html += '</div>';
-    });
+    html += '</div>';
 
     el.innerHTML = html;
 
-    // Restore focus to search if active
+    // Restore search focus
     var inp = document.getElementById('rounds-search');
-    if(inp && _searchTerm) inp.focus();
+    if(inp && _searchTerm){
+      inp.focus();
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // FILTERS BAR
+  // ══════════════════════════════════════════
+
+  function _renderFilters(totalCount){
+    var html = '<div class="mr-filters">';
+
+    // Status tabs
+    html += '<div class="mr-status-tabs">';
+    for(var i = 0; i < STATUS_TABS.length; i++){
+      var tab = STATUS_TABS[i];
+      var active = (_statusFilter === tab.key) ? ' mr-tab-active' : '';
+      var onclick = 'RoundsPage.setStatusFilter(' + (tab.key ? '\'' + tab.key + '\'' : 'null') + ')';
+      html += '<button class="mr-tab' + active + '" onclick="' + onclick + '">' + tab.label + '</button>';
+    }
+    html += '</div>';
+
+    // Second row: course filter + search
+    html += '<div class="mr-filter-row">';
+
+    // Course dropdown
+    var courses = _getCourseOptions();
+    if(courses.length > 1){
+      html += '<select class="mr-select" onchange="RoundsPage.setCourseFilter(this.value)">';
+      html += '<option value=""' + (!_courseFilter ? ' selected' : '') + '>All Courses</option>';
+      for(var ci = 0; ci < courses.length; ci++){
+        var sel = (_courseFilter === courses[ci].id) ? ' selected' : '';
+        html += '<option value="' + _esc(courses[ci].id) + '"' + sel + '>' + _esc(courses[ci].name) + '</option>';
+      }
+      html += '</select>';
+    }
+
+    // Search input
+    if(totalCount > 3){
+      html += '<input type="text" class="sh-search-input mr-search" id="rounds-search" placeholder="' + T('searchPh') + '" value="' + _esc(_searchTerm) + '" oninput="RoundsPage.onSearch(this.value)">';
+    }
+
+    html += '</div>';
+    html += '</div>';
+    return html;
   }
 
   // ══════════════════════════════════════════
@@ -114,21 +208,21 @@ const RoundsPage = (function(){
   // ══════════════════════════════════════════
 
   function _renderCard(r){
-    var cls = 'sh-card sh-card-round' + (r.isActive ? ' sh-card-active' : '');
+    var activeId = (typeof RoundStore !== 'undefined') ? RoundStore.getActiveId() : null;
+    var isActive = (r.id === activeId);
+    var cls = 'sh-card sh-card-round' + (isActive ? ' sh-card-active' : '');
     var html = '<div class="' + cls + '">';
 
-    // Head: status + gameplay + date
+    // Head: status + date
     html += '<div class="sh-card-head">';
     html += '<span class="sh-card-status sh-status-' + r.status + '">' + _h().statusLabel(r.status) + '</span>';
-    var gp = _h().formatGameplay(r.gameplay);
-    if(gp) html += '<span class="sh-card-gameplay">' + _h().esc(gp) + '</span>';
-    html += '<span class="sh-card-date">' + r.date + '</span>';
+    html += '<span class="sh-card-date">' + (r.date || '') + '</span>';
     html += '</div>';
 
-    // Title
+    // Title (course name)
     html += '<div class="sh-card-title">' + _h().esc(r.courseName || 'Untitled Round') + '</div>';
 
-    // Meta
+    // Meta: players · holes · progress
     html += '<div class="sh-card-meta">' + _h().formatMeta(r) + '</div>';
 
     // Player names
@@ -136,12 +230,32 @@ const RoundsPage = (function(){
       html += '<div class="sh-card-players">' + _h().formatPlayerNames(r.playerNames) + '</div>';
     }
 
+    // SummaryStats (finished/abandoned — lightweight, no RoundData load)
+    if(r.summaryStats && r.summaryStats.players){
+      var statsLines = [];
+      for(var key in r.summaryStats.players){
+        var p = r.summaryStats.players[key];
+        var line = (p.name ? _esc(p.name) + ': ' : '') + _h().formatSummaryStats(p);
+        statsLines.push(line);
+      }
+      if(statsLines.length > 0){
+        html += '<div class="sh-card-stats">';
+        statsLines.forEach(function(l){ html += '<div class="sh-stat-line">' + l + '</div>'; });
+        html += '</div>';
+      }
+    }
+
+    // Abandon reason
+    if(r.status === 'abandoned' && r.abandonReason){
+      html += '<div class="sh-abandon-reason">' + _esc(r.abandonReason) + '</div>';
+    }
+
     // Actions
     html += '<div class="sh-card-actions">';
     html += '<button class="sh-btn-sm" onclick="event.stopPropagation(); Router.navigate(\'/round/' + r.id + '\')">' + T('openBtn') + '</button>';
-    html += '<button class="sh-btn-sm" onclick="event.stopPropagation(); RoundsPage.duplicateRound(\'' + r.id + '\', ' + r.isActive + ')">' + T('duplicateBtn') + '</button>';
+    html += '<button class="sh-btn-sm" onclick="event.stopPropagation(); RoundsPage.duplicateRound(\'' + r.id + '\', ' + isActive + ')">' + T('duplicateBtn') + '</button>';
 
-    if(!r.isActive){
+    if(!isActive){
       if(_confirmingId === r.id){
         html += '<button class="sh-btn-sm sh-btn-confirm-del" onclick="event.stopPropagation(); RoundsPage.confirmDelete(\'' + r.id + '\')">' + T('confirmBtn') + '</button>';
         html += '<button class="sh-btn-sm" onclick="event.stopPropagation(); RoundsPage.cancelDelete()">' + T('cancelBtn') + '</button>';
@@ -156,8 +270,20 @@ const RoundsPage = (function(){
   }
 
   // ══════════════════════════════════════════
-  // SEARCH
+  // FILTER HANDLERS
   // ══════════════════════════════════════════
+
+  function setStatusFilter(status){
+    _statusFilter = status || null;
+    _cancelConfirm();
+    render();
+  }
+
+  function setCourseFilter(courseId){
+    _courseFilter = courseId || null;
+    _cancelConfirm();
+    render();
+  }
 
   function onSearch(val){
     _searchTerm = (val || '').trim();
@@ -165,7 +291,7 @@ const RoundsPage = (function(){
     render();
   }
 
-  function _filter(list, term){
+  function _textFilter(list, term){
     if(!term) return list;
     var lc = term.toLowerCase();
     return list.filter(function(r){
@@ -181,14 +307,13 @@ const RoundsPage = (function(){
   }
 
   // ══════════════════════════════════════════
-  // DELETE (inline confirm)
+  // DELETE
   // ══════════════════════════════════════════
 
   function startDelete(id){
     _cancelConfirm();
     _confirmingId = id;
     render();
-    // Auto-cancel after 3s
     _confirmTimer = setTimeout(function(){
       _confirmingId = null;
       _confirmTimer = null;
@@ -198,7 +323,10 @@ const RoundsPage = (function(){
 
   function confirmDelete(id){
     _cancelConfirm();
-    if(D.deleteRound(id)) render();
+    if(typeof RoundStore !== 'undefined'){
+      RoundStore.remove(id);
+    }
+    render();
   }
 
   function cancelDelete(){
@@ -218,19 +346,13 @@ const RoundsPage = (function(){
   function duplicateRound(id, isActive){
     var round;
     if(isActive){
-      // Active round: build from scorecard
-      if(typeof Round !== 'undefined'){
-        round = Round.fromScorecard(D.sc());
-      }
+      if(typeof Round !== 'undefined') round = Round.fromScorecard(D.sc());
     } else {
       round = D.getRound(id);
     }
     if(!round) return;
-
     var clone = Round.cloneRound(round, { clearScores: true });
-    if(D.putRound(clone)){
-      render();
-    }
+    if(D.putRound(clone)) render();
   }
 
   // ══════════════════════════════════════════
@@ -242,11 +364,13 @@ const RoundsPage = (function(){
   }
 
   return {
-    render: render,
-    onSearch: onSearch,
-    startDelete: startDelete,
-    confirmDelete: confirmDelete,
-    cancelDelete: cancelDelete,
-    duplicateRound: duplicateRound
+    render:          render,
+    setStatusFilter: setStatusFilter,
+    setCourseFilter: setCourseFilter,
+    onSearch:        onSearch,
+    startDelete:     startDelete,
+    confirmDelete:   confirmDelete,
+    cancelDelete:    cancelDelete,
+    duplicateRound:  duplicateRound
   };
 })();
